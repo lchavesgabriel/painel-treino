@@ -1,0 +1,6 @@
+.env.local
+data/
+data-backup-*/
+site/
+cache-dados.enc
+*.tgz
