@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:">
+<title>Painel de treino</title>
+<style>
+:root { color-scheme: light dark; --bg: #f3f2ee; --card: #ffffff; --ink: #1d1a16; --muted: #665f55; --line: #e1dfd8; --accent: #185fa5; --bad: #a32d2d; }
+@media (prefers-color-scheme: dark) { :root { --bg: #151412; --card: #211f1c; --ink: #f1ece2; --muted: #a8a193; --line: #36322c; --accent: #2b6fb7; --bad: #f09595; } }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--bg); color: var(--ink); font: 15px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif; }
+main { width: min(100%, 380px); background: var(--card); border: 0.5px solid var(--line); border-radius: 12px; padding: 22px; }
+h1 { font-size: 18px; font-weight: 600; margin: 0 0 6px; }
+p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+label.f { display: block; font-size: 13px; margin-bottom: 4px; }
+input[type="password"] { width: 100%; min-height: 42px; padding: 8px 10px; font-size: 16px; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 8px; }
+.rem { display: flex; align-items: center; gap: 8px; margin: 12px 0; font-size: 14px; color: var(--ink); }
+.rem input { width: 18px; height: 18px; }
+button { width: 100%; min-height: 44px; font-size: 15px; font-weight: 600; color: #fff; background: var(--accent); border: 0; border-radius: 8px; cursor: pointer; }
+button:disabled { opacity: .6; cursor: default; }
+#erro { min-height: 20px; margin: 10px 0 0; font-size: 13px; color: var(--bad); }
+.small { margin: 14px 0 0; font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Painel de treino</h1>
+  <p>Os dados ficam criptografados. Digite a senha para abrir.</p>
+  <form id="form">
+    <label class="f" for="senha">Senha</label>
+    <input type="password" id="senha" autocomplete="current-password" autofocus required>
+    <label class="rem"><input type="checkbox" id="lembrar"> Lembrar neste aparelho</label>
+    <button type="submit" id="abrir">Abrir</button>
+    <p id="erro" role="alert"></p>
+  </form>
+  <p class="small">A senha é conferida aqui no seu aparelho e nunca é enviada a ninguém.</p>
+</main>
+<script type="application/json" id="p">"__PAYLOAD__"</script>
+<script>
+'use strict';
+const P = JSON.parse(document.getElementById('p').textContent);
+const SAVED = 'senha-painel';
+const form = document.getElementById('form');
+const erro = document.getElementById('erro');
+const button = document.getElementById('abrir');
+const bytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+async function decifrar(senha) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(senha), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: bytes(P.salt), iterations: P.iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const gz = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(P.iv) }, key, bytes(P.ct));
+  return new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+}
+function mostrar(html) {
+  window.__criptografado = true;
+  document.open();
+  document.write(html);
+  document.close();
+}
+function lembrado() { try { return localStorage.getItem(SAVED); } catch { return null; } }
+function esquecer() { try { localStorage.removeItem(SAVED); } catch { /* sem armazenamento */ } }
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const senha = document.getElementById('senha').value;
+  if (!senha) return;
+  erro.textContent = '';
+  button.disabled = true;
+  button.textContent = 'Abrindo…';
+  try {
+    if (!('subtle' in crypto) || typeof DecompressionStream === 'undefined') throw new Error('navegador');
+    const html = await decifrar(senha);
+    if (document.getElementById('lembrar').checked) { try { localStorage.setItem(SAVED, senha); } catch { /* sem armazenamento */ } }
+    mostrar(html);
+  } catch (e) {
+    erro.textContent = e.message === 'navegador' ? 'Este navegador é antigo demais para abrir o painel. Atualize o navegador.' : 'Senha incorreta.';
+    button.disabled = false;
+    button.textContent = 'Abrir';
+    document.getElementById('senha').select();
+  }
+});
+
+// Com a senha lembrada, abre direto; se ela deixou de valer (senha trocada), esquece e pede de novo.
+const salva = lembrado();
+if (salva && 'subtle' in crypto && typeof DecompressionStream !== 'undefined') {
+  button.disabled = true;
+  button.textContent = 'Abrindo…';
+  decifrar(salva).then(mostrar).catch(() => {
+    esquecer();
+    button.disabled = false;
+    button.textContent = 'Abrir';
+    erro.textContent = 'A senha salva não vale mais. Digite a nova senha.';
+  });
+}
+</script>
+</body>
+</html>

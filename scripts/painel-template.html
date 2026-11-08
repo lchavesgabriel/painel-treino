@@ -1,0 +1,2442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:">
+<title>Painel de treino</title>
+<style>
+:root {
+  color-scheme: light;
+  --plane: #f3f2ee; --surface: #ffffff; --ink: #1d1a16; --ink-2: #4f4a42; --muted: #665f55; --grid: #e1dfd8; --mark-line: #1d1a16;
+  --accent: #185fa5; --accent-bg: #e6f1fb; --on-accent: #ffffff; --fill-accent: #185fa5;
+  --ok-bg: #eaf3de; --ok-ink: #27500a; --warn-bg: #faeeda; --warn-ink: #633806; --bad-bg: #fcebeb; --bad-ink: #791f1f; --neutral-bg: #f1efe8; --neutral-ink: #444441;
+  --sleep: #6250d6; --train: #d2521f; --water: #2a78d6; --hrv: #0f8a5f; --stress: #c8417c; --battery: #a86f00;
+  --excellent: #0a8f0a; --good: #4f9a1f; --fair: #b97a00; --poor: #d03b3b;
+  --hit: rgba(29,26,22,.11); --wash: rgba(29,26,22,.06);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane: #151412; --surface: #211f1c; --ink: #f1ece2; --ink-2: #c9c2b4; --muted: #a8a193; --grid: #36322c; --mark-line: #f1ece2;
+  --accent: #85b7eb; --accent-bg: #1c3149; --on-accent: #ffffff; --fill-accent: #2b6fb7;
+  --ok-bg: #233a14; --ok-ink: #c0dd97; --warn-bg: #4a3210; --warn-ink: #fac775; --bad-bg: #4a1b1b; --bad-ink: #f7c1c1; --neutral-bg: #2e2b27; --neutral-ink: #d3d1c7;
+  --sleep: #9085e9; --train: #ee7a45; --water: #5598e7; --hrv: #2fbf8c; --stress: #e87ba4; --battery: #e0a100;
+  --excellent: #0ca30c; --good: #6fb83a; --fair: #fab219; --poor: #e66767;
+  --hit: rgba(241,236,226,.15); --wash: rgba(241,236,226,.08);
+}
+* { box-sizing: border-box; }
+html { background: var(--plane); }
+body { margin: 0; background: var(--plane); color: var(--ink); font-family: "Segoe UI", system-ui, -apple-system, sans-serif; font-size: calc(15px * var(--u)); line-height: 1.45; }
+h1, h2, h3, h4, p { margin: 0; }
+h1, h2, .hero h2 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; }
+button, input { font: inherit; color: inherit; }
+button { background: transparent; border: 1px solid var(--grid); border-radius: 6px; cursor: pointer; }
+button:hover { background: var(--wash); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.shell { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 14px; padding-bottom: 8px; }
+h1 { font-size: calc(21px * var(--u)); }
+#theme { padding: 5px 10px; font-size: calc(13px * var(--u)); color: var(--ink-2); min-height: 34px; white-space: nowrap; }
+.filters-wrap { position: sticky; top: 0; z-index: 6; background: var(--plane); border-bottom: 2px solid var(--ink); }
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding-top: 8px; padding-bottom: 8px; }
+#presets { display: flex; gap: 4px; }
+#presets button { padding: 5px 10px; font-size: calc(13px * var(--u)); color: var(--ink-2); white-space: nowrap; min-height: 34px; }
+#presets button[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); font-weight: 600; }
+#presets button[aria-pressed="true"]::before { content: "✓ "; }
+.dates { display: flex; align-items: center; gap: 6px; font-size: calc(13px * var(--u)); color: var(--ink-2); }
+input[type="date"] { background: var(--surface); border: 1px solid var(--grid); border-radius: 6px; padding: 4px 6px; min-height: 34px; color-scheme: inherit; }
+.range { margin-left: auto; font-size: calc(12px * var(--u)); color: var(--muted); }
+.hero { padding-top: 28px; padding-bottom: 20px; }
+.hero h2 { font-size: calc(40px * var(--u)); line-height: 1.18; max-width: 880px; }
+.hero h2 .n { font-family: "Segoe UI", system-ui, sans-serif; font-weight: 300; font-variant-numeric: lining-nums; }
+.hero .sub { color: var(--ink-2); font-size: calc(16px * var(--u)); margin-top: 8px; }
+.criterion { color: var(--muted); font-size: calc(12px * var(--u)); margin-top: 6px; max-width: 820px; }
+.cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--grid); border-bottom: 1px solid var(--grid); }
+.card { padding: 12px 12px; border-left: 1px solid var(--grid); }
+.card:first-child { border-left: 0; padding-left: 0; }
+.card .lab { display: flex; align-items: center; gap: 6px; font-size: calc(12px * var(--u)); color: var(--ink-2); }
+.dot { width: 9px; height: 9px; border-radius: 2px; flex: none; display: inline-block; }
+.card .value { font-size: calc(32px * var(--u)); font-weight: 300; line-height: 1.2; white-space: nowrap; }
+.card .del { font-size: calc(12px * var(--u)); color: var(--ink); }
+.card .detail { font-size: calc(12px * var(--u)); color: var(--muted); }
+.note { color: var(--muted); font-size: calc(12px * var(--u)); margin-top: 8px; }
+.duo { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 0 36px; align-items: start; margin-top: 18px; }
+.pair { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 0 36px; align-items: start; }
+.panel { border-top: 1px solid var(--grid); padding: 14px 0 18px; min-width: 0; }
+.panel h2 { font-size: calc(24px * var(--u)); margin-bottom: 6px; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 16px; flex-wrap: wrap; }
+.stat { font-size: calc(13px * var(--u)); color: var(--ink-2); }
+.stat strong { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: calc(12px * var(--u)); color: var(--ink-2); margin: 4px 0; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.key { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.key.line { height: 2px; width: 14px; border-radius: 1px; }
+.cal-panel { position: sticky; top: calc(var(--bar-h, 54px) + 8px); max-height: calc(100vh - var(--bar-h, 54px) - 16px); overflow-y: auto; }
+#cal-hint { font-size: calc(12px * var(--u)); color: var(--ink-2); min-height: 18px; margin-bottom: 4px; }
+.cal { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px 2px; }
+.cal .wd { text-align: center; font-size: calc(11px * var(--u)); color: var(--muted); position: sticky; top: 0; background: var(--surface); z-index: 1; padding: 2px 0; }
+.day { position: relative; display: block; width: 100%; text-align: center; border: 2px solid transparent; border-radius: 6px; padding: 3px 0 2px; font-size: calc(11px * var(--u)); line-height: 1.22; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.day svg { display: block; width: 100%; max-width: 64px; margin: 0 auto 1px; }
+.day svg text { fill: var(--ink); font-size: calc(14px * var(--u)); font-weight: 600; font-family: "Segoe UI", system-ui, sans-serif; }
+.day b { display: block; font-weight: 500; color: var(--ink); }
+.day .no { font-weight: 400; color: var(--muted); font-size: calc(10px * var(--u)); }
+.cal.filtering .day:not(.hit):not(.sel) circle { opacity: .4; }
+.day.hit { background: var(--hit); }
+.day.hit::after { content: "●"; position: absolute; top: 0; right: 3px; font-size: calc(8px * var(--u)); color: var(--ink); }
+.day.sel { border-color: var(--ink); }
+.dayhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.big { font-size: calc(28px * var(--u)); font-weight: 300; font-variant-numeric: tabular-nums; }
+.phases { display: flex; gap: 2px; height: 22px; margin: 8px 0 4px; }
+.phases i { display: block; border-radius: 3px; min-width: 2px; }
+.plist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px 12px; font-size: calc(12px * var(--u)); color: var(--ink-2); }
+.plist span { display: flex; justify-content: space-between; gap: 6px; font-variant-numeric: tabular-nums; }
+.plist b { font-weight: 600; color: var(--ink); }
+.sub-h { font-size: calc(12px * var(--u)); font-weight: 600; margin: 10px 0 2px; }
+.row { display: flex; justify-content: space-between; gap: 10px; font-size: calc(13px * var(--u)); padding: 3px 0; border-top: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+.row small { color: var(--ink-2); font-size: calc(12px * var(--u)); text-align: right; }
+.meter { height: 8px; border-radius: 4px; background: var(--grid); margin: 5px 0 3px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--water); border-radius: 4px; }
+.foot { display: flex; justify-content: space-between; gap: 10px; font-size: calc(12px * var(--u)); color: var(--ink-2); }
+.pat { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--grid); border-radius: 0; padding: 7px 6px; font-size: calc(14px * var(--u)); min-height: 36px; }
+.pat .tag, .warn { font-size: calc(12px * var(--u)); color: var(--ink-2); white-space: nowrap; }
+.pat .warn { margin-left: 6px; }
+.pat em { font-style: normal; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pat[aria-expanded="true"] { outline: 2px solid var(--ink); outline-offset: -2px; border-radius: 4px; }
+.pat-more { padding: 7px 6px 10px; font-size: calc(13px * var(--u)); color: var(--ink-2); }
+.pat-more .count { display: block; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.pat-days { display: none; margin-top: 4px; }
+details { margin-top: 8px; font-size: calc(13px * var(--u)); color: var(--ink-2); }
+details summary { cursor: pointer; min-height: 24px; }
+details .wrap { max-height: 320px; overflow: auto; margin-top: 6px; }
+.caution { font-size: calc(13px * var(--u)); color: var(--ink-2); margin-bottom: 8px; }
+.highlights { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.window h3 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size: calc(16px * var(--u)); }
+.window h4 { font-size: calc(12px * var(--u)); font-weight: 500; color: var(--ink-2); margin: 10px 0 4px; }
+.hl { display: block; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--grid); border-radius: 0; padding: 6px 2px; }
+.hl b { font-weight: 500; display: block; font-size: calc(14px * var(--u)); }
+.hl span { display: block; font-size: calc(12px * var(--u)); color: var(--ink-2); }
+.hl .why { color: var(--ink); font-variant-numeric: tabular-nums; }
+.chart { width: 100%; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart text { fill: var(--muted); font-size: calc(11px * var(--u)); font-variant-numeric: tabular-nums; }
+.chart text.cap { fill: var(--ink-2); }
+.chart text.goal-label { fill: var(--ink); font-weight: 600; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.hit-area { fill: transparent; outline: none; }
+.hit-area:hover, .hit-area:focus-visible { fill: var(--wash); }
+.empty { color: var(--muted); padding: 20px 0; text-align: center; }
+table { border-collapse: collapse; width: 100%; font-size: calc(13px * var(--u)); }
+th { text-align: left; font-weight: 500; color: var(--ink-2); border-bottom: 1px solid var(--grid); padding: 5px 10px 5px 0; }
+td { border-bottom: 1px solid var(--grid); padding: 5px 10px 5px 0; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+tr.total td { font-weight: 600; border-bottom: 0; }
+.ranks { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.rank h3 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size: calc(17px * var(--u)); }
+.rank h4 { font-size: calc(12px * var(--u)); font-weight: 500; color: var(--ink-2); margin: 8px 0 3px; }
+.bar-row { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px; align-items: center; font-size: calc(12px * var(--u)); padding: 2px 0; }
+.bar-row .label { color: var(--ink-2); }
+.bar-track { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.bar { height: 11px; border-radius: 0 4px 4px 0; min-width: 2px; flex: none; }
+.bar-row .amount { white-space: nowrap; font-variant-numeric: tabular-nums; }
+#tip { position: fixed; z-index: 20; pointer-events: none; display: none; max-width: 260px; background: var(--surface); color: var(--ink); border: 1px solid var(--ink-2); border-radius: 8px; padding: 7px 10px; font-size: calc(12px * var(--u)); box-shadow: 0 4px 16px rgba(0,0,0,.22); }
+#tip strong { display: block; font-size: calc(14px * var(--u)); font-weight: 600; }
+#tip div { color: var(--ink-2); }
+footer { color: var(--muted); font-size: calc(12px * var(--u)); padding-top: 8px; padding-bottom: 24px; border-top: 1px solid var(--grid); }
+
+.now { padding: 20px 0 16px; }
+/* Layout em telas: menu lateral, cartoes brancos com borda fina, tela Hoje. */
+.app { display: grid; grid-template-columns: calc(204px * var(--u)) minmax(0, 1fr); gap: calc(16px * var(--u)); max-width: calc(1320px * var(--u)); margin: 0 auto; padding: 16px; align-items: start; }
+.content { min-width: 0; }
+.side-nav { position: sticky; top: 16px; background: var(--surface); border: 0.5px solid var(--grid); border-radius: 12px; padding: 14px 10px; display: flex; flex-direction: column; gap: 12px; max-height: calc(100vh - 32px); overflow-y: auto; }
+.brand { font-size: calc(14px * var(--u)); font-weight: 600; margin: 0 8px; }
+#menu { display: flex; flex-direction: column; gap: 2px; }
+#menu a { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 8px; color: var(--ink-2); text-decoration: none; font-size: calc(14px * var(--u)); white-space: nowrap; }
+#menu a svg { width: calc(17px * var(--u)); height: calc(17px * var(--u)); flex: none; }
+#menu a:hover { background: var(--wash); }
+#menu a[aria-current="page"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+#menu a:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.period { border-top: 0.5px solid var(--grid); padding: 10px 8px 0; }
+.period { margin-top: 0; }
+.period summary { cursor: pointer; font-size: calc(12px * var(--u)); font-weight: 600; color: var(--ink-2); padding: 0 0 8px; min-height: 0; line-height: 1.35; }
+.brand-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 4px 0 8px; }
+.brand-row .brand { margin: 0; }
+.brand-btns { display: inline-flex; gap: 4px; }
+.brand-row #sair { padding: 3px 10px; font-size: calc(12px * var(--u)); min-height: 28px; color: var(--ink-2); }
+.brand-row #sair[hidden] { display: none; }
+.brand-row #theme { width: auto; padding: 3px 10px; font-size: calc(12px * var(--u)); min-height: 28px; color: var(--ink-2); }
+.period #presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.period #presets button { padding: 3px 8px; font-size: calc(12px * var(--u)); min-height: 28px; }
+.period .dates { flex-direction: column; align-items: stretch; gap: 4px; margin-top: 8px; font-size: calc(12px * var(--u)); }
+.period .dates label { display: flex; flex-direction: column; gap: 2px; }
+.period input[type="date"] { min-height: 30px; width: 100%; font-size: calc(12px * var(--u)); }
+.period .range { display: block; margin: 8px 0 0; font-size: calc(11px * var(--u)); color: var(--muted); }
+.view[hidden] { display: none; }
+.card, .panel { background: var(--surface); border: 0.5px solid var(--grid); border-radius: 12px; padding: 16px 18px; margin: 0 0 12px; min-width: 0; }
+.panel h2 { margin-bottom: 6px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.card-head h2 { font-family: "Segoe UI", system-ui, sans-serif; font-size: calc(16px * var(--u)); font-weight: 600; margin: 0; }
+.now { padding: 16px 18px; }
+.now-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 8px; }
+.now-top .kick { font-size: calc(12px * var(--u)); color: var(--muted); }
+.now-title { font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size: calc(28px * var(--u)); line-height: 1.2; margin: 0 0 4px; max-width: 880px; }
+.now-reason { font-size: calc(14px * var(--u)); color: var(--ink-2); margin: 0 0 14px; max-width: 880px; }
+.pill { display: inline-block; font-size: calc(12px * var(--u)); font-weight: 600; padding: 2px 10px; border-radius: 8px; white-space: nowrap; }
+.pill.ok { background: var(--ok-bg); color: var(--ok-ink); }
+.pill.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.pill.bad { background: var(--bad-bg); color: var(--bad-ink); }
+.pill.neutral { background: var(--neutral-bg); color: var(--neutral-ink); }
+.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.metric { background: var(--plane); border-radius: 8px; padding: 10px 12px; }
+.metric p { margin: 0; }
+.metric .lab { font-size: calc(12px * var(--u)); color: var(--ink-2); }
+.metric .val { font-size: calc(22px * var(--u)); font-weight: 500; font-variant-numeric: tabular-nums; }
+.metric .del { font-size: calc(12px * var(--u)); color: var(--ink-2); }
+.act { display: flex; gap: 12px; align-items: flex-start; padding: 9px 0; border-top: 0.5px solid var(--grid); }
+.act .num { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-size: calc(12px * var(--u)); font-weight: 600; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; }
+.act-title { font-size: calc(15px * var(--u)); margin: 0; }
+.act-detail { font-size: calc(12px * var(--u)); color: var(--ink-2); margin: 2px 0 0; }
+.go { background: var(--fill-accent); color: var(--on-accent); border: 1px solid var(--fill-accent); font-weight: 600; font-size: calc(13px * var(--u)); padding: 7px 14px; min-height: 36px; }
+.go:hover { background: var(--fill-accent); filter: brightness(1.12); }
+.daily .go { border-color: var(--fill-accent); }
+.home-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.type-card { border: 0.5px solid var(--grid); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.type-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 0 4px; font-size: calc(14px * var(--u)); }
+.type-line { font-size: calc(12px * var(--u)); color: var(--ink-2); margin: 2px 0 0; }
+.perf-card.wide { grid-column: 1 / -1; }
+.routine { margin: 8px 0 12px; }
+.routine h3 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.foot { padding: 4px 4px 20px; }
+/* Escala tipografica: frase de abertura 24 px, titulo de secao 16 px (sem serifa), subtitulo 14 px, texto 14 a 15 px, apoio 13 px, minimo 11 px. */
+.cards .card { background: transparent; border: 0; border-left: 1px solid var(--grid); border-radius: 0; margin: 0; padding: 12px; }
+.cards .card:first-child { border-left: 0; padding-left: 0; }
+.cards .card .value { font-size: calc(24px * var(--u)); }
+.panel h2, .panel-head h2 { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; font-size: calc(16px * var(--u)); font-weight: 600; line-height: 1.3; margin: 0 0 6px; }
+.panel-head { margin-bottom: 2px; }
+.hero { padding: 4px 0 14px; }
+.hero h2 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size: calc(24px * var(--u)); line-height: 1.25; max-width: none; }
+.hero .sub { font-size: calc(14px * var(--u)); margin-top: 6px; }
+.criterion, .note { font-size: calc(13px * var(--u)); }
+.big { font-size: calc(22px * var(--u)); }
+.rank h3, .window h3 { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; font-size: calc(14px * var(--u)); font-weight: 600; }
+.cal .day .no { font-size: calc(11px * var(--u)); }
+.now-title { font-size: calc(26px * var(--u)); }
+.pat-action { margin-top: 6px; font-size: calc(13px * var(--u)); color: var(--ink); }
+.pat-action b { font-weight: 600; }
+.pat-action .note { margin-top: 2px; }
+.now-kicker { font-size: calc(12px * var(--u)); color: var(--muted); }
+.now-head { font-size: calc(34px * var(--u)); line-height: 1.18; margin: 2px 0 4px; max-width: 880px; }
+.now-reason { font-size: calc(15px * var(--u)); color: var(--ink-2); max-width: 880px; }
+.now-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 0 36px; margin-top: 12px; }
+.now-grid h3 { font-size: calc(14px * var(--u)); font-weight: 600; margin: 0 0 4px; }
+.now-actions { margin: 4px 0 0; padding-left: 20px; font-size: calc(15px * var(--u)); }
+.now-actions li { margin: 5px 0; }
+.now a { color: var(--ink); }
+.perf-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin-top: 8px; }
+.perf-card { min-width: 0; border-top: 1px solid var(--grid); padding: 8px 0 14px; }
+.perf-card h3 { font-size: calc(15px * var(--u)); font-weight: 600; margin: 8px 0 4px; }
+.now-alerts { font-size: calc(14px * var(--u)); margin-top: 6px; max-width: 880px; }
+.now-alerts div { margin: 2px 0; }
+.daily { border: 1px solid var(--grid); border-radius: 8px; padding: 12px 14px; margin: 8px 0 14px; }
+.daily h3 { font-size: calc(16px * var(--u)); font-weight: 600; margin: 0 0 6px; }
+.daily .ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 6px 0; font-size: calc(13px * var(--u)); color: var(--ink-2); }
+.daily .ctl .focus { margin: 0; }
+.daily .go { padding: 7px 16px; font-weight: 600; border-color: var(--ink); min-height: 38px; }
+.daily .result { margin-top: 10px; border-top: 1px solid var(--grid); padding-top: 8px; }
+.daily .headline { font-size: calc(18px * var(--u)); margin: 2px 0; }
+.coach-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin-top: 8px; }
+.coach-grid h3 { font-size: calc(14px * var(--u)); font-weight: 600; margin: 10px 0 4px; }
+.tag-src { font-size: calc(11px * var(--u)); color: var(--muted); border: 1px solid var(--grid); border-radius: 4px; padding: 0 5px; margin-left: 6px; white-space: nowrap; }
+.good { color: var(--good); font-weight: 600; }
+.bad { color: var(--poor); font-weight: 600; }
+#week-panel, #plan-panel, #coach-panel { scroll-margin-top: calc(var(--bar-h, 54px) + 8px); }
+.verdict { font-size: calc(16px * var(--u)); margin: 4px 0 2px; }
+.verdict strong { font-weight: 600; }
+.week-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 28px; margin-top: 8px; }
+.week-grid h3 { font-size: calc(14px * var(--u)); font-weight: 600; margin: 8px 0 2px; }
+.week-grid ul, .plan-foot ul { margin: 4px 0 0; padding-left: 18px; font-size: calc(13px * var(--u)); color: var(--ink-2); }
+.week-grid li, .plan-foot li { margin: 3px 0; }
+.disclaimer { border: 1px solid var(--ink-2); border-left-width: 4px; border-radius: 6px; padding: 8px 12px; font-size: calc(13px * var(--u)); color: var(--ink); margin: 6px 0 10px; }
+.focus { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.focus button { padding: 5px 12px; font-size: calc(13px * var(--u)); min-height: 34px; color: var(--ink-2); }
+.focus button[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); font-weight: 600; }
+.focus button[aria-pressed="true"]::before { content: "✓ "; }
+.plan-line { font-size: calc(14px * var(--u)); color: var(--ink); margin: 6px 0; }
+.sess-lines div { font-size: calc(12px * var(--u)); color: var(--ink-2); }
+.sess-lines b { color: var(--ink); font-weight: 500; }
+td.top { vertical-align: top; }
+.chip { font-weight: 600; white-space: nowrap; }
+
+@media (max-width: 860px) {
+  .week-grid, .now-grid, .coach-grid, .perf-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .app { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 10px; }
+  .side-nav { display: contents; }
+  .brand { margin: 2px 4px 0; }
+  #menu { position: sticky; top: 0; z-index: 6; flex-direction: row; overflow-x: auto; background: var(--plane); padding: 6px 0; border-bottom: 0.5px solid var(--grid); }
+  #menu a { padding: 7px 10px; }
+  .period { background: var(--surface); border: 0.5px solid var(--grid); border-radius: 12px; padding: 10px 12px; }
+  .period .dates { flex-direction: row; }
+  .period .dates input { width: 100%; }
+  .period .range { display: block; }
+  .cards .card, .cards .card:first-child { border-left: 0; padding: 8px 0; }
+  .brand-row { margin: 2px 2px 0; }
+  .period { padding: 8px 12px; }
+  .period summary { padding: 0; }
+  .period[open] summary { padding-bottom: 8px; }
+  .hero h2 { font-size: calc(20px * var(--u)); }
+  input[type="date"], .period input { font-size: calc(16px * var(--u)); }
+  .metrics, .home-grid { grid-template-columns: minmax(0, 1fr); }
+  .now-title { font-size: calc(22px * var(--u)); }
+  .card, .panel { padding: 12px 14px; }
+  .now-grid > div + div { margin-top: 16px; }
+  .shell { padding-left: 12px; padding-right: 12px; }
+  #presets { overflow-x: auto; max-width: 100%; }
+  .range { display: none; }
+  .dates input { width: 132px; }
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+  .card, .card:first-child { border-left: 0; padding: 8px 0; }
+  .duo, .pair { grid-template-columns: minmax(0, 1fr); }
+  .cal-panel { position: static; max-height: none; overflow: visible; }
+  .cal .wd { position: static; }
+  .day svg { max-width: 46px; }
+  .pat-days { display: block; }
+  .highlights, .ranks { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Escala por tamanho de tela: em monitores grandes tudo cresce junto (texto, menu, largura). */
+:root { --u: 1; }
+@media (min-width: 1500px) { :root { --u: 1.12; } }
+@media (min-width: 1800px) { :root { --u: 1.25; } }
+@media (min-width: 2300px) { :root { --u: 1.45; } }
+.brand { white-space: nowrap; }
+.brand-row { flex-wrap: wrap; row-gap: 6px; }
+.period summary .sum-l, .period summary .sum-v { display: block; }
+.period summary { list-style: none; }
+.period summary::-webkit-details-marker { display: none; }
+.period summary .sum-l { font-weight: 600; }
+.period summary .sum-l::before { content: "▾ "; }
+.period:not([open]) summary .sum-l::before { content: "▸ "; }
+.period summary .sum-v { font-weight: 400; color: var(--muted); }
+@media (max-width: 860px) {
+  .period summary .sum-l, .period summary .sum-v { display: inline; }
+  .period summary .sum-l::after { content: ': '; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side-nav" id="side">
+    <div class="brand-row"><p class="brand">Painel de treino</p><span class="brand-btns"><button id="sair" type="button" hidden aria-label="Sair e esquecer a senha neste aparelho">Sair</button><button id="theme" type="button" aria-label="Alternar tema claro e escuro">Escuro</button></span></div>
+    <nav id="menu" aria-label="Seções">
+      <a href="#hoje" data-view="hoje"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg><span>Hoje</span></a>
+      <a href="#desempenho" data-view="desempenho"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span>Desempenho</span></a>
+      <a href="#natacao" data-view="natacao"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="17" cy="6" r="2"/><path d="M4 11l5-3 4 2 3-2"/><path d="M3 16c1.5 0 1.5 1.5 3 1.5S7.5 16 9 16s1.5 1.5 3 1.5S13.5 16 15 16s1.5 1.5 3 1.5S19.5 16 21 16"/><path d="M3 21c1.5 0 1.5-1.5 3-1.5S7.5 21 9 21s1.5-1.5 3-1.5S13.5 21 15 21s1.5-1.5 3-1.5S19.5 21 21 21"/></svg><span>Natação</span></a>
+      <a href="#sono" data-view="sono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg><span>Sono e descanso</span></a>
+      <a href="#historico" data-view="historico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/></svg><span>Histórico</span></a>
+    </nav>
+    <details class="period" id="period" open>
+      <summary id="period-sum">Período</summary>
+      <div id="presets"></div>
+      <div class="dates">
+        <label>De <input type="date" id="from" aria-label="Data inicial"></label>
+        <label>até <input type="date" id="to" aria-label="Data final"></label>
+      </div>
+      <span class="range" id="range"></span>
+    </details>
+  </aside>
+
+  <main class="content">
+    <div class="view" id="view-hoje" data-view="hoje">
+      <section class="card now" id="now" aria-label="Situação da semana"></section>
+      <section class="card" id="actions" aria-label="O que fazer agora"></section>
+      <div id="daily"></div>
+      <section class="card" id="home-perf" aria-label="Desempenho por tipo"></section>
+    </div>
+
+    <div class="view" id="view-desempenho" data-view="desempenho" hidden>
+      <section class="panel" id="perf-panel">
+    <div class="panel-head"><h2>Desempenho por tipo de treino</h2><span class="stat" id="perf-stat"></span></div>
+    <p class="caution">Ganho e perda de cada tipo de treino, com alerta de queda e de ausência. Compara você com você mesmo: o período do filtro contra o período anterior do mesmo tamanho. São associações nos seus dados, não diagnóstico.</p>
+    <div id="perf"></div>
+  </section>
+
+      <section class="panel">
+      <div class="panel-head"><h2>Treinos por semana</h2><span class="stat" id="ex-stat"></span></div>
+      <div class="chart" id="ex-chart"></div>
+      <div id="ex-totals" style="margin-top:10px"></div>
+      <p class="note">Barras: sessões por semana, com a divisão por tipo na dica. Semanas de segunda a domingo. Contam só as atividades dentro do período. Ritmo = tempo ÷ distância; na natação usa o tempo em movimento, sem as pausas, como o Garmin Connect.</p>
+      <details><summary>Ver tabela por semana</summary><div class="wrap" id="ex-table"></div></details>
+    </section>
+    </div>
+
+    <div class="view" id="view-natacao" data-view="natacao" hidden>
+      <section class="panel" id="coach-panel">
+    <div class="panel-head"><h2>Treinador de natação</h2><span class="stat" id="coach-stat"></span></div>
+    <p class="caution">Análise por regras das suas últimas natações (ritmo, SWOLF, braçadas, frequência cardíaca). Compara você com você mesmo; não substitui um treinador e não vê a sua técnica, só os números.</p>
+    <div id="coach"></div>
+  </section>
+
+      <section class="panel" id="plan-panel">
+    <div class="panel-head"><h2>Plano de natação da semana seguinte</h2><span class="stat" id="plan-stat"></span></div>
+    <div class="disclaimer" role="note"><strong>Aviso:</strong> é uma sugestão automática, calculada por regras a partir dos seus dados. Não substitui um treinador, não é orientação médica e não é enviada ao relógio.</div>
+    <div id="plan"></div>
+  </section>
+    </div>
+
+    <div class="view" id="view-sono" data-view="sono" hidden>
+      <section class="panel" id="week-panel">
+    <div class="panel-head"><h2>Resumo da semana</h2><span class="stat" id="week-stat"></span></div>
+    <p class="caution">Texto gerado por regras fixas a partir dos seus dados. São associações e sinais, não diagnóstico e não substituem treinador ou orientação médica.</p>
+    <div id="week"></div>
+  </section>
+
+      <div class="duo">
+    <section class="panel cal-panel" id="cal-panel">
+      <div class="panel-head"><h2>Sono por dia</h2><span class="stat" id="sleep-stat"></span></div>
+      <div class="legend" id="sleep-legend"></div>
+      <p id="cal-hint" aria-live="polite"></p>
+      <div class="cal" id="calendar"></div>
+      <details><summary>Ver tabela</summary><div class="wrap" id="sleep-table"></div></details>
+    </section>
+    <div class="side">
+      <section class="panel"><h2>Detalhe do dia</h2><div id="day"></div></section>
+      <section class="panel">
+        <div class="panel-head"><h2>Padrões no período</h2><span class="stat" id="pattern-stat"></span></div>
+        <div id="patterns"></div>
+        <details><summary>Ver todas as regras</summary><div class="wrap" id="rules"></div></details>
+        <p class="note">Clique em um padrão para ver a regra e marcar os dias no calendário. Só aparecem padrões com pelo menos 10 ocorrências no período. Hidratação usa só dias com registro e meta, e não inclui hoje. Ao abrir um padrão aparece a ação sugerida; só há ação quando os seus dados sustentam (diferença de 15 pontos percentuais entre grupos de 10 ou mais noites, 5 pontos de score ou 3 pts de Body Battery), e sempre como associação, não causa.</p>
+      </section>
+      <section class="panel">
+        <h2>Destaques da semana e do mês</h2>
+        <p class="caution">Associações nos seus dados, não causas. Um padrão aparecer junto de uma mudança não prova que um provocou o outro.</p>
+        <div class="highlights" id="highlights"></div>
+        <p class="note">Entram padrões com pelo menos 10 ocorrências no histórico e ao menos 1 na janela; padrões de água ficam de fora por terem poucos registros. Janelas: 7 e 30 dias até a data final do seletor. Impacto: diferença do pico de Body Battery no dia seguinte versus os demais dias, no histórico. Nos padrões ligados a sono e HRV, o Body Battery depende dessas medidas, então o impacto não se aplica e a ordem usa só ocorrências. Nos demais, a pontuação é ocorrências na janela × impacto a favor do padrão (mínimo 1). Cada item mostra o critério da sua posição; em empate, vence quem tem mais ocorrências.</p>
+      </section>
+    </div>
+  </div>
+
+      <section class="panel">
+      <div class="panel-head"><h2>Hidratação</h2><span class="stat" id="hy-stat"></span></div>
+      <div class="chart" id="hy-chart"></div>
+      <p class="note">Poucos registros: média só dos dias com registro. Dia sem registro aparece como "sem dados", não como zero.</p>
+      <details><summary>Ver tabela</summary><div class="wrap" id="hy-table"></div></details>
+    </section>
+    </div>
+
+    <div class="view" id="view-historico" data-view="historico" hidden>
+      <section class="panel" id="overview">
+        <section class="hero" id="hero" aria-live="polite">
+    <h2 id="hero-text"></h2>
+    <p class="sub" id="hero-sub"></p>
+    <p class="criterion" id="hero-crit"></p>
+  </section>
+
+  <section class="cards" id="cards" aria-label="Resumo do período"></section>
+  <p class="note" id="cards-note"></p>
+      </section>
+
+      <section class="panel">
+    <div class="panel-head"><h2>Melhores e piores períodos</h2><span class="stat" id="rank-stat"></span></div>
+    <div class="ranks" id="ranks"></div>
+    <p class="note">Só semanas ou meses completos dentro do período. Sono: score médio, com pelo menos 3 noites. Volume: tempo total de treino. Hidratação: % médio da meta nos dias com registro, com pelo menos 3 dias. Mais volume não significa necessariamente melhor.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Dias sem dado por métrica</h2>
+    <div id="gaps"></div>
+  </section>
+    </div>
+
+    <footer class="foot" id="foot"></footer>
+  </main>
+</div>
+<div id="tip" role="status"></div>
+
+<script type="application/json" id="dados">"__DADOS__"</script>
+<script>
+'use strict';
+const DATA = JSON.parse(document.getElementById('dados').textContent);
+const TZ = 'America/Sao_Paulo';
+const CATS = [
+  { key: 'natacao', name: 'Natação', pace: 100, paceUnit: 'min/100 m' },
+  { key: 'musculacao', name: 'Musculação' },
+  { key: 'futebol', name: 'Futebol' },
+  { key: 'cardio', name: 'Cardio indoor' },
+  { key: 'corrida', name: 'Corrida', pace: 1000, paceUnit: 'min/km' },
+  { key: 'ciclismo', name: 'Ciclismo' },
+  { key: 'outros', name: 'Outros' },
+];
+const BANDS = [
+  { min: 90, name: 'Excelente', range: '90–100', color: '--excellent' },
+  { min: 80, name: 'Bom', range: '80–89', color: '--good' },
+  { min: 60, name: 'Razoável', range: '60–79', color: '--fair' },
+  { min: 0, name: 'Ruim', range: '0–59', color: '--poor' },
+];
+const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+const NONE = 'sem dados';
+const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
+const firstDay = DATA.first;
+const dayIndex = new Map(Object.entries(DATA.days));
+
+// Datas como texto AAAA-MM-DD, com aritmetica em UTC para evitar erro de fuso.
+const ms = (d) => Date.parse(`${d}T00:00:00Z`);
+const addDays = (d, n) => new Date(ms(d) + n * 86400000).toISOString().slice(0, 10);
+const weekday = (d) => new Date(ms(d)).getUTCDay();
+const monday = (d) => addDays(d, -((weekday(d) + 6) % 7));
+const short = (d) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+const full = (d) => `${short(d)}/${d.slice(0, 4)}`;
+function eachDay(from, to) {
+  const out = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) out.push(d);
+  return out;
+}
+const num = (v, digits = 0) => v.toLocaleString('pt-BR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+const mean = (list) => (list.length ? list.reduce((a, b) => a + b, 0) / list.length : null);
+function hm(sec) {
+  const min = Math.round(sec / 60);
+  return `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`;
+}
+// Natacao: o ritmo usa o tempo em movimento (como o Garmin Connect); sem ele, cai no tempo total.
+const paceSec = (a) => (a.cat === 'natacao' && a.mv > 0 ? a.mv : a.sec);
+function pace(sec, meters, unit) {
+  const per = Math.round(sec / (meters / unit));
+  return `${Math.floor(per / 60)}:${String(per % 60).padStart(2, '0')}`;
+}
+const css = (name) => `var(${name})`;
+const bandOf = (score) => BANDS.find((b) => score >= b.min);
+
+function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') node.className = v;
+    else if (k === 'text') node.textContent = v;
+    else node.setAttribute(k, v);
+  }
+  node.append(...children);
+  return node;
+}
+function sv(tag, attrs = {}, ...children) {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'text') node.textContent = v;
+    else node.setAttribute(k, v);
+  }
+  node.append(...children);
+  return node;
+}
+const fill = (id, ...children) => document.getElementById(id).replaceChildren(...children);
+function table(headers, rows, numeric = []) {
+  const head = el('tr', {}, ...headers.map((h, i) => el('th', { text: h, class: numeric.includes(i) ? 'n' : '' })));
+  const body = rows.map((row) => el('tr', { class: row.total ? 'total' : '' }, ...row.cells.map((cell, i) => {
+    const td = el('td', { class: numeric.includes(i) ? 'n' : '' });
+    td.append(cell);
+    return td;
+  })));
+  return el('table', {}, el('thead', {}, head), el('tbody', {}, ...body));
+}
+const swatch = (color, cls = 'key') => el('i', { class: cls, style: `background:${css(color)}` });
+const legendItem = (color, label, cls) => el('span', {}, swatch(color, cls ? `key ${cls}` : 'key'), label);
+
+// Tooltip unico; o valor tambem esta sempre nas tabelas.
+const tip = document.getElementById('tip');
+function showTip(target, x, y) {
+  const lines = (target.getAttribute('data-lines') || '').split('|').filter(Boolean);
+  tip.replaceChildren(el('strong', { text: target.getAttribute('data-value') }), ...lines.map((text) => el('div', { text })));
+  tip.style.display = 'block';
+  const box = tip.getBoundingClientRect();
+  tip.style.left = `${Math.max(8, Math.min(x + 12, innerWidth - box.width - 8))}px`;
+  tip.style.top = `${Math.max(8, y - box.height - 10)}px`;
+}
+document.addEventListener('pointermove', (e) => {
+  const target = e.target.closest?.('[data-value]');
+  if (target) showTip(target, e.clientX, e.clientY);
+  else tip.style.display = 'none';
+});
+document.addEventListener('focusin', (e) => {
+  const target = e.target.closest?.('[data-value]');
+  if (!target) return;
+  const box = target.getBoundingClientRect();
+  showTip(target, box.left + box.width / 2, box.top);
+});
+document.addEventListener('focusout', () => { tip.style.display = 'none'; });
+
+const state = { preset: '30', from: addDays(today, -29), to: today, day: null, pattern: null };
+const PRESETS = [
+  { id: 'week', label: 'Semana atual', range: () => [monday(today), today] },
+  { id: '7', label: '7 dias', range: () => [addDays(today, -6), today] },
+  { id: '30', label: '30 dias', range: () => [addDays(today, -29), today] },
+  { id: '90', label: '90 dias', range: () => [addDays(today, -89), today] },
+  { id: 'all', label: 'Tudo', range: () => [firstDay, today] },
+];
+const fromInput = document.getElementById('from');
+const toInput = document.getElementById('to');
+
+function renderPresets() {
+  fill('presets', ...PRESETS.map((p) => {
+    const b = el('button', { type: 'button', text: p.label, 'aria-pressed': String(state.preset === p.id) });
+    b.addEventListener('click', () => {
+      [state.from, state.to] = p.range();
+      state.preset = p.id;
+      render();
+      if (matchMedia('(max-width: 860px)').matches) document.getElementById('period').open = false; // no celular, fecha depois de escolher
+    });
+    return b;
+  }));
+}
+function onDates() {
+  if (!fromInput.value || !toInput.value) return;
+  state.from = fromInput.value <= toInput.value ? fromInput.value : toInput.value;
+  state.to = fromInput.value <= toInput.value ? toInput.value : fromInput.value;
+  state.preset = 'free';
+  render();
+}
+fromInput.addEventListener('change', onDates);
+toInput.addEventListener('change', onDates);
+
+function slice(from, to) {
+  const days = eachDay(from, to);
+  const records = days.map((date) => ({ date, ...(dayIndex.get(date) ?? {}) }));
+  const activities = DATA.activities.filter((a) => a.d >= from && a.d <= to);
+  return { days, records, activities };
+}
+const selection = () => slice(state.from, state.to);
+function previousSlice(length) {
+  const from = addDays(state.from, -length);
+  return from < firstDay ? null : { from, to: addDays(state.from, -1), ...slice(from, addDays(state.from, -1)) };
+}
+
+// Frase do topo: descreve os numeros do periodo, sem afirmar causa.
+const MIN_HERO_NIGHTS = 5;
+function renderHero({ days, records, activities }) {
+  const heroText = document.getElementById('hero-text');
+  const heroSub = document.getElementById('hero-sub');
+  const nights = records.filter((r) => r.sleep);
+  const previous = previousSlice(days.length);
+  const before = previous ? previous.records.filter((r) => r.sleep) : [];
+  const base = `Critério: frase gerada com a média de sono de ${nights.length} noites com registro em ${short(state.from)} a ${short(state.to)} (mínimo ${MIN_HERO_NIGHTS}).`;
+  if (nights.length < MIN_HERO_NIGHTS) {
+    heroText.replaceChildren();
+    heroSub.textContent = '';
+    document.getElementById('hero').style.paddingTop = '14px';
+    document.getElementById('hero-crit').textContent = `${base} Sem dados suficientes para a frase neste período.`;
+    return;
+  }
+  document.getElementById('hero').style.paddingTop = '';
+  const avg = mean(nights.map((r) => r.sleep.sec));
+  const n = (text) => el('span', { class: 'n', text });
+  const parts = ['Você dormiu ', n(hm(avg)), ' por noite'];
+  let criterion = ` Sem comparação: o período anterior precisa estar dentro do histórico e ter pelo menos ${MIN_HERO_NIGHTS} noites.`;
+  if (before.length >= MIN_HERO_NIGHTS) {
+    const diff = Math.round((avg - mean(before.map((r) => r.sleep.sec))) / 60);
+    if (Math.abs(diff) < 5) parts.push(', quase igual ao período anterior.');
+    else parts.push(', ', n(String(Math.abs(diff))), ` minutos a ${diff > 0 ? 'mais' : 'menos'} que no período anterior.`);
+    criterion = ` Comparada com ${before.length} noites em ${short(previous.from)} a ${short(previous.to)}. Diferença menor que 5 min conta como quase igual.`;
+  } else {
+    parts.push('.');
+  }
+  heroText.replaceChildren(...parts);
+  const trained = new Set(activities.map((a) => a.d)).size;
+  heroSub.textContent = `Treinou em ${trained} de ${days.length} dias.`;
+  document.getElementById('hero-crit').textContent = `${base}${criterion} A frase descreve os números e não indica causa.`;
+}
+
+const MIN_COMPARE = 3;
+function deltaText(current, previous, format, goodWhenUp) {
+  if (previous === undefined) return 'sem período anterior';
+  if (current == null || previous == null) return 'sem dados para comparar';
+  const { amount, isZero } = format(Math.abs(current - previous));
+  if (isZero) return 'sem mudança';
+  const up = current > previous;
+  const verdict = goodWhenUp == null ? '' : ` · ${up === goodWhenUp ? 'melhor' : 'pior'}`;
+  return `${up ? '▲' : '▼'} ${amount}${verdict}`;
+}
+function renderCards({ days, records, activities }) {
+  const prior = previousSlice(days.length);
+  const summarize = (list) => {
+    const values = (read) => list.map(read).filter((v) => v != null);
+    return {
+      sleep: values((r) => r.sleep?.sec), score: values((r) => r.sleep?.score), water: values((r) => r.water?.ml),
+      hrv: values((r) => r.hrv), stress: values((r) => r.stress), battery: values((r) => r.battery),
+    };
+  };
+  const now = summarize(records);
+  const before = prior ? summarize(prior.records) : null;
+  const avgOf = (group, key) => (group[key].length >= MIN_COMPARE ? mean(group[key]) : null);
+  const compare = (key) => (before ? avgOf(before, key) : undefined);
+  const whole = (unit) => (v) => ({ amount: `${num(v)}${unit}`, isZero: Math.round(v) === 0 });
+  const minutes = (v) => ({ amount: `${Math.round(v / 60)} min`, isZero: Math.round(v / 60) === 0 });
+  const liters = (v) => ({ amount: `${num(v / 1000, 1)} L`, isZero: Math.round(v / 100) === 0 });
+  const of = (n) => `${n}/${days.length} dias com dado`;
+  const trained = new Set(activities.map((a) => a.d)).size;
+  const priorTrained = prior ? new Set(prior.activities.map((a) => a.d)).size : undefined;
+  const display = (key, format) => (now[key].length ? format(mean(now[key])) : NONE);
+  const CARDS = [
+    ['--sleep', 'Sono', display('sleep', hm), deltaText(avgOf(now, 'sleep'), compare('sleep'), minutes, true),
+      now.score.length ? `score ${num(mean(now.score))} · ${of(now.sleep.length)}` : of(now.sleep.length)],
+    ['--train', 'Dias com treino', String(trained),
+      deltaText(trained, priorTrained, (v) => ({ amount: `${v} ${v === 1 ? 'dia' : 'dias'}`, isZero: v === 0 }), null),
+      `de ${days.length} dias · ${activities.length} sessões`],
+    ['--water', 'Hidratação', display('water', (v) => `${num(v / 1000, 1)} L`), deltaText(avgOf(now, 'water'), compare('water'), liters, null), of(now.water.length)],
+    ['--hrv', 'HRV', display('hrv', (v) => `${num(v)} ms`), deltaText(avgOf(now, 'hrv'), compare('hrv'), whole(' ms'), true), of(now.hrv.length)],
+    ['--stress', 'Estresse', display('stress', (v) => num(v)), deltaText(avgOf(now, 'stress'), compare('stress'), whole(''), false), `0–100 · ${of(now.stress.length)}`],
+    ['--battery', 'Body Battery', display('battery', (v) => num(v)), deltaText(avgOf(now, 'battery'), compare('battery'), whole(''), true), `pico diário · ${of(now.battery.length)}`],
+  ];
+  fill('cards', ...CARDS.map(([color, label, value, delta, detail]) => el('article', { class: 'card' },
+    el('div', { class: 'lab' }, swatch(color, 'dot'), label), el('div', { class: 'value', text: value }),
+    el('div', { class: 'del', text: delta }), el('div', { class: 'detail', text: detail }))));
+  document.getElementById('cards-note').textContent = prior
+    ? `▲▼ comparam com os ${days.length} dias anteriores (${short(prior.from)} a ${short(prior.to)}). Dias com treino e Hidratação não indicam melhor ou pior.`
+    : 'Sem comparação: o período anterior ficaria fora do histórico.';
+}
+
+function ring(score) {
+  const length = 2 * Math.PI * 17;
+  const svg = sv('svg', { viewBox: '0 0 40 40', 'aria-hidden': 'true' },
+    sv('circle', { cx: 20, cy: 20, r: 17, fill: 'none', stroke: css('--grid'), 'stroke-width': 5 }));
+  if (score != null) {
+    svg.append(sv('circle', { cx: 20, cy: 20, r: 17, fill: 'none', stroke: css(bandOf(score).color), 'stroke-width': 5,
+      'stroke-linecap': 'round', 'stroke-dasharray': `${(length * score) / 100} ${length}`, transform: 'rotate(-90 20 20)' }));
+  }
+  svg.append(sv('text', { x: 20, y: 20, 'text-anchor': 'middle', 'dominant-baseline': 'central', text: score == null ? '–' : String(score) }));
+  return svg;
+}
+function renderCalendar({ days, records }) {
+  const sleep = records.filter((r) => r.sleep);
+  const scored = sleep.filter((r) => r.sleep.score != null);
+  fill('sleep-stat', ...(sleep.length ? [
+    'Média ', el('strong', { text: hm(mean(sleep.map((r) => r.sleep.sec))) }),
+    ...(scored.length ? [' · score ', el('strong', { text: num(mean(scored.map((r) => r.sleep.score))) })] : []),
+    ` · ${sleep.length} de ${days.length} noites`,
+  ] : [NONE]));
+  fill('sleep-legend', ...BANDS.map((b) => legendItem(b.color, `${b.name} ${b.range}`)));
+  const cells = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'].map((d) => el('div', { class: 'wd', text: d }));
+  for (let i = (weekday(state.from) + 6) % 7; i > 0; i--) cells.push(el('div'));
+  for (const record of records) {
+    const score = record.sleep?.score ?? null;
+    const duration = record.sleep ? hm(record.sleep.sec) : NONE;
+    const label = `${WEEKDAYS[weekday(record.date)]} ${short(record.date)}: ${score == null ? 'sem score' : `score ${score}, ${bandOf(score).name}`}, sono ${duration}`;
+    const cell = el('button', { type: 'button', class: 'day', 'data-date': record.date, 'aria-label': label, 'aria-pressed': 'false' },
+      ring(score), short(record.date), el('b', { class: record.sleep ? '' : 'no', text: duration }));
+    cell.addEventListener('click', () => selectDay(record.date));
+    cells.push(cell);
+  }
+  fill('calendar', ...cells);
+  fill('sleep-table', table(['Dia', 'Score', 'Faixa', 'Duração', 'Profundo', 'REM', 'Leve', 'Acordado'],
+    [...records].reverse().map((r) => ({ cells: [
+      full(r.date), r.sleep?.score != null ? String(r.sleep.score) : NONE, r.sleep?.score != null ? bandOf(r.sleep.score).name : NONE,
+      r.sleep ? hm(r.sleep.sec) : NONE, r.sleep ? hm(r.sleep.deep ?? 0) : '–', r.sleep ? hm(r.sleep.rem ?? 0) : '–',
+      r.sleep ? hm(r.sleep.light ?? 0) : '–', r.sleep ? hm(r.sleep.awake ?? 0) : '–',
+    ] })), [1, 3, 4, 5, 6, 7]));
+}
+
+function selectDay(date, focus = true) {
+  state.day = date;
+  for (const cell of document.querySelectorAll('.day')) {
+    const on = cell.dataset.date === date;
+    cell.classList.toggle('sel', on);
+    cell.setAttribute('aria-pressed', String(on));
+  }
+  renderDay();
+  if (focus && innerWidth <= 860) document.getElementById('day').closest('section').scrollIntoView({ block: 'nearest' });
+}
+function renderDay() {
+  const date = state.day;
+  if (!date) {
+    fill('day', el('p', { class: 'empty', text: `${NONE} neste período` }));
+    return;
+  }
+  const record = dayIndex.get(date) ?? {};
+  const sleep = record.sleep;
+  const head = el('div', { class: 'dayhead' }, el('span', { text: `${WEEKDAYS[weekday(date)]}, ${full(date)}` }),
+    el('span', { class: 'big', text: sleep ? hm(sleep.sec) : NONE }));
+  const nodes = [head];
+  if (sleep) {
+    const stages = [['Profundo', sleep.deep, 100], ['REM', sleep.rem, 72], ['Leve', sleep.light, 46], ['Acordado', sleep.awake, 24]];
+    const score = sleep.score == null ? 'Score sem dados' : `Score ${sleep.score} · ${bandOf(sleep.score).name}`;
+    nodes.push(el('div', { class: 'foot' }, el('span', { text: score })));
+    nodes.push(el('div', { class: 'phases', role: 'img', 'aria-label': 'Fases do sono' }, ...stages.filter(([, sec]) => sec > 0)
+      .map(([, sec, tone]) => el('i', { style: `flex:${sec};background:color-mix(in srgb, var(--sleep) ${tone}%, var(--grid))` }))));
+    nodes.push(el('div', { class: 'plist' }, ...stages.map(([name, sec]) => el('span', {}, name, el('b', { text: sec == null ? NONE : hm(sec) })))));
+  }
+  nodes.push(el('div', { class: 'sub-h', text: 'Treinos' }));
+  const workouts = DATA.activities.filter((a) => a.d === date);
+  if (workouts.length) {
+    for (const a of workouts) {
+      const cat = CATS.find((c) => c.key === a.cat);
+      const facts = [a.t, `${Math.round(a.sec / 60)} min`];
+      if (a.m > 0) facts.push(`${num(a.m / 1000, 2)} km`);
+      if (cat.pace && a.m > 0) facts.push(`${pace(paceSec(a), a.m, cat.pace)} ${cat.paceUnit}`);
+      nodes.push(el('div', { class: 'row', 'data-workout': a.cat }, cat.name, el('small', { text: facts.join(' · ') })));
+    }
+  } else {
+    nodes.push(el('div', { class: 'row' }, 'Sem treino registrado'));
+  }
+  nodes.push(el('div', { class: 'sub-h', text: 'Hidratação' }));
+  if (record.water) {
+    const { ml, goal } = record.water;
+    if (goal) nodes.push(el('div', { class: 'meter' }, el('i', { style: `width:${Math.min(100, (100 * ml) / goal)}%` })));
+    nodes.push(el('div', { class: 'foot', id: 'day-water' }, el('span', { text: `${num(ml / 1000, 1)} L${goal ? ` de ${num(goal / 1000, 1)} L` : ''}` }),
+      el('span', { text: goal ? `${num((100 * ml) / goal)}% da meta` : 'sem meta' })));
+  } else {
+    nodes.push(el('div', { class: 'foot', id: 'day-water' }, el('span', { text: NONE })));
+  }
+  nodes.push(el('div', { class: 'sub-h', text: 'Recuperação' }));
+  const number = (v, unit = '') => (v == null ? NONE : `${v}${unit}`);
+  nodes.push(el('div', { class: 'plist' }, el('span', {}, 'HRV', el('b', { text: number(record.hrv, ' ms') })),
+    el('span', {}, 'Estresse', el('b', { text: number(record.stress) })), el('span', {}, 'Body Battery', el('b', { text: number(record.battery) }))));
+  fill('day', ...nodes);
+}
+
+function topRounded(x, y, w, h, r) {
+  const radius = Math.min(r, h, w / 2);
+  return `M${x},${y + h}V${y + radius}Q${x},${y} ${x + radius},${y}H${x + w - radius}Q${x + w},${y} ${x + w},${y + radius}V${y + h}Z`;
+}
+function chartBox(id, height) {
+  const width = Math.max(260, document.getElementById(id).clientWidth);
+  const box = { width, height, left: 30, right: 6, top: 18, bottom: 22 };
+  box.plotW = width - box.left - box.right;
+  box.plotH = height - box.top - box.bottom;
+  box.svg = sv('svg', { viewBox: `0 0 ${width} ${height}`, height });
+  return box;
+}
+function drawGrid(box, max, format, ticks) {
+  for (let i = 0; i <= ticks; i++) {
+    const y = box.top + box.plotH - (i / ticks) * box.plotH;
+    box.svg.append(sv('line', { x1: box.left, x2: box.width - box.right, y1: y, y2: y, stroke: css(i ? '--grid' : '--muted'), 'stroke-width': 1 }));
+    box.svg.append(sv('text', { x: box.left - 6, y: y + 4, 'text-anchor': 'end', text: format((max * i) / ticks) }));
+  }
+}
+
+function renderExercise({ activities }) {
+  const weeks = [];
+  for (let w = monday(state.from); w <= state.to; w = addDays(w, 7)) weeks.push(w);
+  const counts = weeks.map((w) => {
+    const list = activities.filter((a) => monday(a.d) === w);
+    return { week: w, list, byCat: CATS.map((c) => list.filter((a) => a.cat === c.key).length) };
+  });
+  const totalSec = activities.reduce((s, a) => s + a.sec, 0);
+  const totalM = activities.reduce((s, a) => s + (a.m ?? 0), 0);
+  const present = CATS.filter((c) => activities.some((a) => a.cat === c.key));
+  fill('ex-stat', ...(activities.length ? [el('strong', { text: String(activities.length) }), ' sessões · ',
+    el('strong', { text: hm(totalSec) }), ' · ', el('strong', { text: `${num(totalM / 1000, 1)} km` })] : [NONE]));
+  if (!activities.length) {
+    fill('ex-chart', el('p', { class: 'empty', text: `${NONE}: nenhum treino no período` }));
+    fill('ex-totals');
+    fill('ex-table');
+    return;
+  }
+  const box = chartBox('ex-chart', 200);
+  const max = Math.max(3, Math.ceil(Math.max(...counts.map((c) => c.list.length)) / 3) * 3);
+  drawGrid(box, max, (v) => String(Math.round(v)), 3);
+  const band = box.plotW / weeks.length;
+  const barW = Math.min(24, Math.max(3, band - 3));
+  const base = box.top + box.plotH;
+  counts.forEach((week, i) => {
+    const x = box.left + band * i + (band - barW) / 2;
+    const h = (week.list.length / max) * box.plotH;
+    if (h > 0) box.svg.append(sv('path', { d: topRounded(x, base - h, barW, h, 4), fill: css('--train'), class: 'week-bar' }));
+    if (week.list.length && weeks.length <= 16) {
+      box.svg.append(sv('text', { class: 'cap', x: x + barW / 2, y: base - h - 5, 'text-anchor': 'middle', text: String(week.list.length) }));
+    }
+    const split = CATS.map((c, idx) => [c.name, week.byCat[idx]]).filter(([, n]) => n).map(([name, n]) => `${name}: ${n}`);
+    box.svg.append(sv('rect', { class: 'hit-area week-hit', x: box.left + band * i, y: box.top, width: band, height: box.plotH,
+      'data-value': `${week.list.length} ${week.list.length === 1 ? 'sessão' : 'sessões'}`, 'data-lines': [`semana de ${short(week.week)}`, ...split].join('|'),
+      ...(weeks.length <= 40 ? { tabindex: 0, 'aria-label': `semana de ${short(week.week)}: ${week.list.length} sessões. ${split.join(', ')}` } : {}) }));
+  });
+  const every = Math.max(1, Math.ceil(44 / band));
+  weeks.forEach((w, i) => {
+    if ((weeks.length - 1 - i) % every === 0) box.svg.append(sv('text', { x: box.left + band * (i + 0.5), y: box.height - 5, 'text-anchor': 'middle', text: short(w) }));
+  });
+  fill('ex-chart', box.svg);
+
+  const rows = present.map((c) => {
+    const list = activities.filter((a) => a.cat === c.key);
+    const withDistance = list.filter((a) => a.m > 0);
+    const meters = withDistance.reduce((s, a) => s + a.m, 0);
+    const paceText = c.pace && meters ? `${pace(withDistance.reduce((s, a) => s + paceSec(a), 0), meters, c.pace)} ${c.paceUnit}` : '–';
+    return { cells: [c.name, String(list.length), hm(list.reduce((s, a) => s + a.sec, 0)), meters ? `${num(meters / 1000, 2)} km` : '–', paceText] };
+  });
+  rows.push({ total: true, cells: ['Total', String(activities.length), hm(totalSec), `${num(totalM / 1000, 2)} km`, ''] });
+  fill('ex-totals', table(['Tipo', 'Sessões', 'Tempo', 'Distância', 'Ritmo médio'], rows, [1, 2, 3, 4]));
+  fill('ex-table', table(['Semana de', ...present.map((c) => c.name), 'Total'],
+    [...counts].reverse().map((w) => ({ cells: [full(w.week), ...present.map((c) => String(w.byCat[CATS.indexOf(c)])), String(w.list.length)] })),
+    present.map((_, i) => i + 1).concat(present.length + 1)));
+}
+
+function renderHydration({ days, records }) {
+  const water = records.filter((r) => r.water);
+  const hit = water.filter((r) => r.water.goal && r.water.ml >= r.water.goal).length;
+  fill('hy-stat', ...(water.length ? ['Média ', el('strong', { text: `${num(mean(water.map((r) => r.water.ml)) / 1000, 1)} L` }),
+    ` · ${water.length} de ${days.length} dias com registro · meta em ${hit}`] : [NONE]));
+  if (!water.length) {
+    fill('hy-chart', el('p', { class: 'empty', text: `${NONE}: nenhum registro de hidratação no período` }));
+    fill('hy-table');
+    return;
+  }
+  const box = chartBox('hy-chart', 200);
+  const peak = Math.max(...water.map((r) => Math.max(r.water.ml, r.water.goal ?? 0)));
+  const max = Math.ceil(peak / 500) * 500;
+  drawGrid(box, max, (v) => num(v / 1000, 1), max / 500 <= 8 ? max / 500 : Math.ceil(max / 1000));
+  const band = box.plotW / days.length;
+  const barW = Math.min(18, Math.max(1, band - 2));
+  const base = box.top + box.plotH;
+  const yOf = (value) => base - (value / max) * box.plotH;
+  records.forEach((r, i) => {
+    if (r.water) {
+      const x = box.left + band * i + (band - barW) / 2;
+      box.svg.append(sv('path', { d: topRounded(x, yOf(r.water.ml), barW, base - yOf(r.water.ml), 3), fill: css('--water') }));
+      if (r.water.goal) box.svg.append(sv('line', { x1: box.left + band * i, x2: box.left + band * (i + 1), y1: yOf(r.water.goal), y2: yOf(r.water.goal), stroke: css('--mark-line'), 'stroke-width': 2, 'pointer-events': 'none' }));
+    }
+    const value = r.water ? `${num(r.water.ml)} ml` : NONE;
+    const lines = [full(r.date), ...(r.water?.goal ? [`Meta ${num(r.water.goal)} ml`, `${num((100 * r.water.ml) / r.water.goal)}% da meta`] : [])];
+    box.svg.append(sv('rect', { class: 'hit-area water-hit', x: box.left + band * i, y: box.top, width: band, height: box.plotH, 'data-value': value, 'data-lines': lines.join('|'),
+      ...(days.length <= 40 ? { tabindex: 0, 'aria-label': `${full(r.date)}: ${value}` } : {}) }));
+  });
+  const lastGoal = water.filter((r) => r.water.goal).at(-1)?.water.goal;
+  if (lastGoal) {
+    box.svg.append(sv('text', { class: 'goal-label', id: 'goal-label', x: box.width - box.right, y: yOf(lastGoal) - 5, 'text-anchor': 'end', text: `meta ${num(lastGoal / 1000, 1)} L` }));
+  }
+  box.svg.append(sv('text', { class: 'end-date', x: box.left, y: box.height - 5, 'text-anchor': 'start', text: short(days[0]) }));
+  box.svg.append(sv('text', { class: 'end-date', x: box.width - box.right, y: box.height - 5, 'text-anchor': 'end', text: short(days.at(-1)) }));
+  fill('hy-chart', box.svg);
+  fill('hy-table', table(['Dia', 'Consumo (ml)', 'Meta (ml)', '% da meta'], [...records].reverse().map((r) => ({ cells: [
+    full(r.date), r.water ? num(r.water.ml) : NONE, r.water?.goal ? num(r.water.goal) : NONE,
+    r.water?.goal ? `${num((100 * r.water.ml) / r.water.goal)}%` : NONE,
+  ] })), [1, 2, 3]));
+}
+
+function runs(dates) {
+  const out = [];
+  for (const d of dates) {
+    const last = out.at(-1);
+    if (last && addDays(last[1], 1) === d) last[1] = d;
+    else out.push([d, d]);
+  }
+  return out.map(([a, b]) => (a === b ? short(a) : `${short(a)} a ${short(b)}`)).join(', ');
+}
+function renderGaps({ days, records }) {
+  const metrics = [
+    ['Sono', (r) => r.sleep], ['Score de sono', (r) => r.sleep?.score != null], ['Hidratação', (r) => r.water],
+    ['HRV', (r) => r.hrv != null], ['Estresse', (r) => r.stress != null], ['Body Battery', (r) => r.battery != null],
+  ];
+  fill('gaps', table(['Métrica', 'Dias sem dado', 'Quais'], metrics.map(([name, has]) => {
+    const missing = records.filter((r) => !has(r)).map((r) => r.date);
+    const detail = missing.length === days.length ? 'todos do período' : runs(missing) || 'nenhum';
+    return { cells: [name, `${missing.length} de ${days.length}`, detail] };
+  }), [1]));
+}
+
+// Etapa 2: padroes calculados uma vez sobre o historico inteiro; os filtros so recortam.
+const MIN_OCCURRENCES = 10;
+const inRange = (dates, from, to) => dates.filter((d) => d >= from && d <= to).length;
+
+function buildPatterns() {
+  const allDays = eachDay(firstDay, today);
+  const rec = (d) => dayIndex.get(d) ?? {};
+  const trained = new Set(DATA.activities.map((a) => a.d));
+  const nights = allDays.filter((d) => rec(d).sleep);
+  const scored = nights.filter((d) => rec(d).sleep.score != null);
+  const trainedScored = scored.filter((d) => trained.has(d));
+  const water = allDays.filter((d) => d < today && rec(d).water?.goal);
+
+  const weeks = [];
+  for (let w = monday(firstDay); addDays(w, 6) < today; w = addDays(w, 7)) {
+    if (w < firstDay) continue;
+    const end = addDays(w, 6);
+    const list = DATA.activities.filter((a) => a.d >= w && a.d <= end);
+    weeks.push({ end, sec: list.reduce((s, a) => s + a.sec, 0), days: new Set(list.map((a) => a.d)), cats: new Set(list.map((a) => a.cat)) });
+  }
+  const weekEnds = weeks.map((w) => w.end);
+  const weekSpan = (end) => eachDay(addDays(end, -6), end);
+  const jumps = weeks.filter((week, i) => {
+    if (i < 4) return false;
+    const base = mean(weeks.slice(i - 4, i).map((w) => w.sec));
+    return base > 0 && week.sec > base * 1.3;
+  }).map((w) => w.end);
+
+  const streakLength = new Map();
+  let run = 0;
+  for (const d of allDays.filter((day) => day < today)) {
+    if (trained.has(d)) {
+      if (run >= 3) streakLength.set(addDays(d, -1), run);
+      run = 0;
+    } else {
+      run++;
+    }
+  }
+  if (run >= 3) streakLength.set(addDays(today, -1), run);
+
+  const bedNights = nights.filter((d) => rec(d).sleep.bed != null);
+  const bedDeviation = new Map();
+  bedNights.forEach((d, i) => {
+    const prior = bedNights.slice(Math.max(0, i - 7), i).map((p) => rec(p).sleep.bed).sort((a, b) => a - b);
+    if (prior.length < 5) return;
+    bedDeviation.set(d, Math.abs(rec(d).sleep.bed - prior[Math.floor(prior.length / 2)]));
+  });
+
+  const hrvBase = allDays.filter((d) => {
+    if (rec(d).hrv == null) return false;
+    return eachDay(addDays(d, -28), addDays(d, -1)).filter((p) => rec(p).hrv != null).length >= 14;
+  });
+  const lowHrv = hrvBase.filter((d) => {
+    const prior = eachDay(addDays(d, -28), addDays(d, -1)).map((p) => rec(p).hrv).filter((v) => v != null);
+    return rec(d).hrv < mean(prior) * 0.9;
+  });
+
+  const bedDays = [...bedDeviation.keys()];
+  return [
+    { id: 'noite-boa', sign: 1, impact: 'none', unit: 'dias', name: 'Noite boa', rule: 'Sono de 7 h ou mais e score de 80 ou mais', base: scored,
+      events: scored.filter((d) => rec(d).sleep.sec >= 25200 && rec(d).sleep.score >= 80) },
+    { id: 'treino-bem-dormido', sign: 1, impact: 'none', unit: 'dias', name: 'Treino após noite boa', rule: 'Dia com treino e score de sono de 80 ou mais', base: trainedScored,
+      events: trainedScored.filter((d) => rec(d).sleep.score >= 80) },
+    { id: 'semana-consistente', sign: 1, unit: 'semanas', span: weekSpan, name: 'Semana consistente', rule: '4 dias ou mais com treino em uma semana completa', base: weekEnds,
+      events: weeks.filter((w) => w.days.size >= 4).map((w) => w.end) },
+    { id: 'semana-completa', sign: 1, unit: 'semanas', span: weekSpan, name: 'Semana com os 3 focos', rule: 'Musculação, natação e futebol na mesma semana completa', base: weekEnds,
+      events: weeks.filter((w) => ['musculacao', 'natacao', 'futebol'].every((c) => w.cats.has(c))).map((w) => w.end) },
+    { id: 'agua-ok', sign: 1, water: true, unit: 'dias', name: 'Meta de água atingida', rule: 'Consumo igual ou acima da meta, só em dias com registro', base: water,
+      events: water.filter((d) => rec(d).water.ml >= rec(d).water.goal) },
+    { id: 'horario-regular', sign: 1, impact: 'none', unit: 'dias', name: 'Horário de dormir regular', rule: 'Dormiu a até 30 min da mediana das 7 noites anteriores (mínimo 5 noites)', base: bedDays,
+      events: bedDays.filter((d) => bedDeviation.get(d) <= 30) },
+    { id: 'sono-curto', sign: -1, impact: 'none', unit: 'dias', name: 'Sono curto', rule: 'Noite com menos de 7 h de sono', base: nights,
+      events: nights.filter((d) => rec(d).sleep.sec < 25200) },
+    { id: 'treino-mal-dormido', sign: -1, impact: 'none', unit: 'dias', name: 'Treino após noite ruim', rule: 'Dia com treino e score de sono abaixo de 60', base: trainedScored,
+      events: trainedScored.filter((d) => rec(d).sleep.score < 60) },
+    { id: 'salto-volume', sign: -1, unit: 'semanas', span: weekSpan, name: 'Salto de volume semanal', rule: 'Tempo de treino da semana mais de 30% acima da média das 4 semanas anteriores', base: weekEnds.slice(4), events: jumps },
+    { id: 'sem-treino', sign: -1, unit: 'sequências', span: (end) => eachDay(addDays(end, -(streakLength.get(end) - 1)), end), name: 'Sequência sem treino', rule: '3 dias seguidos ou mais sem treino; cada sequência conta uma vez, no último dia', base: null, events: [...streakLength.keys()] },
+    { id: 'agua-baixa', sign: -1, water: true, unit: 'dias', name: 'Abaixo da meta de água', rule: 'Consumo abaixo da meta, só em dias com registro; dia sem registro não conta', base: water,
+      events: water.filter((d) => rec(d).water.ml < rec(d).water.goal) },
+    { id: 'horario-irregular', sign: -1, impact: 'none', unit: 'dias', name: 'Horário de dormir irregular', rule: 'Dormiu a mais de 60 min da mediana das 7 noites anteriores (mínimo 5 noites)', base: bedDays,
+      events: bedDays.filter((d) => bedDeviation.get(d) > 60) },
+    { id: 'hrv-baixo', sign: -1, impact: 'none', unit: 'dias', name: 'HRV abaixo do normal', rule: 'HRV da noite abaixo de 90% da média dos 28 dias anteriores (mínimo 14 noites)', base: hrvBase, events: lowHrv },
+  ].map((pattern) => ({ ...pattern, delta: pattern.impact === 'none' || pattern.water ? null : nextDayDelta(pattern.events) }));
+}
+function nextDayDelta(events) {
+  const after = new Set(events.map((d) => addDays(d, 1)));
+  const withEvent = [];
+  const others = [];
+  for (const [date, record] of dayIndex) {
+    if (record.battery != null) (after.has(date) ? withEvent : others).push(record.battery);
+  }
+  return withEvent.length >= MIN_OCCURRENCES && others.length >= MIN_OCCURRENCES ? mean(withEvent) - mean(others) : null;
+}
+const PATTERNS = buildPatterns();
+
+// Etapa 4: de padrao para acao. So vira acao o que tem evidencia nos seus dados;
+// sem evidencia, o padrao fica sem acao (nada de conselho generico).
+const SEVEN_HOURS = 25200;
+const MIN_GROUP = 10;
+const MIN_GAP_PP = 15;
+const MIN_SCORE_GAP = 5;
+const MIN_BATTERY_DROP = 3;
+const ASSOC = ' É associação nos seus dados, não prova de causa.';
+const pctText = (v) => `${num(100 * v)}%`;
+
+// Para cada desfecho de sono, acha o comportamento que mais separa as noites (diferenca de pelo menos 15 pontos percentuais, grupos de 10+ noites).
+function buildInsights() {
+  const rec = (d) => dayIndex.get(d) ?? {};
+  const late = new Set(DATA.activities.filter((a) => a.t >= '19:00').map((a) => a.d));
+  const features = [
+    { when: 'dormiu até a meia-noite', doText: 'dormir até a meia-noite', test: (d) => (rec(d).sleep.bed == null ? null : rec(d).sleep.bed <= 720) },
+    { when: 'dormiu até as 23h', doText: 'dormir até as 23h', test: (d) => (rec(d).sleep.bed == null ? null : rec(d).sleep.bed <= 660) },
+    { when: 'treinou depois das 19h no dia anterior', doText: 'treinar depois das 19h', test: (d) => late.has(addDays(d, -1)) },
+  ];
+  const outcomes = [
+    { id: 'curto', bad: true, label: 'menos de 7 h de sono', test: (d) => rec(d).sleep.sec < SEVEN_HOURS },
+    { id: 'bom', bad: false, label: 'noite boa (7 h ou mais e score 80+)', test: (d) => (rec(d).sleep.score == null ? null : rec(d).sleep.sec >= SEVEN_HOURS && rec(d).sleep.score >= 80) },
+  ];
+  const nights = eachDay(firstDay, today).filter((d) => rec(d).sleep);
+  const result = {};
+  for (const outcome of outcomes) {
+    let best = null;
+    for (const feature of features) {
+      const withF = [];
+      const without = [];
+      for (const d of nights) {
+        const f = feature.test(d);
+        const o = outcome.test(d);
+        if (f == null || o == null) continue;
+        (f ? withF : without).push(o ? 1 : 0);
+      }
+      if (withF.length < MIN_GROUP || without.length < MIN_GROUP) continue;
+      const gap = (mean(withF) - mean(without)) * 100;
+      if (Math.abs(gap) >= MIN_GAP_PP && (!best || Math.abs(gap) > Math.abs(best.gap))) {
+        best = { feature, outcome, r1: mean(withF), r0: mean(without), n1: withF.length, n0: without.length, gap };
+      }
+    }
+    result[outcome.id] = best;
+  }
+  return result;
+}
+const INSIGHTS = buildInsights();
+
+function describeInsight(ins) {
+  if (!ins) return null;
+  const favorable = ins.outcome.bad ? ins.gap < 0 : ins.gap > 0;
+  const fact = `Nas noites em que você ${ins.feature.when}, ${pctText(ins.r1)} tiveram ${ins.outcome.label}, contra ${pctText(ins.r0)} nas demais (${ins.n1} e ${ins.n0} noites).`;
+  return { text: `${favorable ? 'Procure' : 'Evite'} ${ins.feature.doText}.`, fact, evidence: fact + ASSOC };
+}
+function buildAction(p) {
+  if (p.id === 'sono-curto') return describeInsight(INSIGHTS.curto);
+  if (p.id === 'noite-boa') return describeInsight(INSIGHTS.bom);
+  const drop = p.delta != null && p.delta <= -MIN_BATTERY_DROP;
+  const batteryFact = () => `No dia seguinte a esse padrão, seu pico de Body Battery é ${num(Math.abs(p.delta), 1)} pts menor que nos outros dias (${p.events.length} ocorrências).`;
+  if (p.id === 'treino-mal-dormido' && drop) {
+    return { text: 'Depois de uma noite com score abaixo de 60, troque o treino forte por um leve ou adie.', fact: batteryFact(), evidence: batteryFact() + ASSOC };
+  }
+  if (p.id === 'salto-volume' && drop) {
+    return { text: 'Evite subir o tempo de treino da semana mais de 30% sobre a média das 4 anteriores.', fact: batteryFact(), evidence: batteryFact() + ASSOC };
+  }
+  if (p.id === 'horario-irregular' || p.id === 'horario-regular') {
+    const scores = (id) => PATTERNS.find((x) => x.id === id).events.map((d) => dayIndex.get(d)?.sleep?.score).filter((v) => v != null);
+    const regular = scores('horario-regular');
+    const irregular = scores('horario-irregular');
+    if (regular.length >= MIN_GROUP && irregular.length >= MIN_GROUP && mean(regular) - mean(irregular) >= MIN_SCORE_GAP) {
+      const fact = `Score médio de sono ${num(mean(regular))} nas noites com horário regular, contra ${num(mean(irregular))} nas irregulares (${regular.length} e ${irregular.length} noites).`;
+      return { text: 'Mantenha o horário de dormir dentro de 30 min do habitual.', fact, evidence: fact + ASSOC };
+    }
+  }
+  return null;
+}
+const ACTION_BY_ID = Object.fromEntries(PATTERNS.map((p) => [p.id, buildAction(p)]));
+function actionBlock(id) {
+  const action = ACTION_BY_ID[id];
+  if (!action) return el('div', { class: 'note', text: 'Sem ação para este padrão: os seus dados não têm evidência suficiente para recomendar algo.' });
+  return el('div', { class: 'pat-action' }, el('b', { text: 'Então, tente: ' }), action.text, el('div', { class: 'note', text: action.evidence }));
+}
+function impactText(p) {
+  if (p.impact === 'none') return 'impacto: não se aplica';
+  if (p.water) return 'poucos registros';
+  if (p.delta == null) return 'dia seguinte: sem dados';
+  return `dia seguinte: ${p.delta > 0 ? '+' : ''}${num(p.delta, 1)} pts de Body Battery`;
+}
+const signText = (p) => `${p.sign > 0 ? '▲ Bom' : '▼ Ruim'}`;
+function periodStats(p) {
+  const events = p.events.filter((d) => d >= state.from && d <= state.to);
+  const marks = new Set(events.flatMap((d) => (p.span ? p.span(d) : [d])).filter((d) => d >= state.from && d <= state.to));
+  const total = p.base ? inRange(p.base, state.from, state.to) : null;
+  const ratio = total == null ? `${events.length} ${p.unit} em ${eachDay(state.from, state.to).length} dias` : `${events.length} de ${total} ${p.unit}`;
+  return { count: events.length, total, ratio, marks };
+}
+function highlights(from, to, sign) {
+  return PATTERNS
+    .filter((p) => p.sign === sign && !p.water && p.events.length >= MIN_OCCURRENCES)
+    .map((p) => {
+      const weight = p.delta == null ? 1 : Math.max(1, p.delta * sign);
+      const count = inRange(p.events, from, to);
+      return { ...p, count, weight, rankScore: count * weight };
+    })
+    .filter((p) => p.count > 0)
+    .sort((a, b) => b.rankScore - a.rankScore || b.count - a.count)
+    .slice(0, 3);
+}
+function positionText(p, index) {
+  const place = `${index + 1}º`;
+  if (p.impact === 'none' || p.delta == null) return `${place} por ocorrências: ${p.count} na janela`;
+  if (p.weight === 1) return `${place} por pontuação: ${p.count} na janela × impacto mínimo 1 = ${num(p.rankScore, 1)}`;
+  return `${place} por pontuação: ${p.count} na janela × impacto ${num(p.weight, 1)} = ${num(p.rankScore, 1)}`;
+}
+function selectPattern(id) {
+  state.pattern = state.pattern === id ? null : id;
+  renderPatterns();
+  applyPattern();
+  document.querySelector(`.pat[data-pattern="${id}"]`)?.focus({ preventScroll: true });
+}
+function applyPattern() {
+  const pattern = PATTERNS.find((p) => p.id === state.pattern);
+  const stats = pattern ? periodStats(pattern) : null;
+  document.getElementById('calendar').classList.toggle('filtering', Boolean(pattern));
+  const cells = [...document.querySelectorAll('.day')];
+  cells.forEach((cell) => cell.classList.toggle('hit', Boolean(stats?.marks.has(cell.dataset.date))));
+  document.getElementById('cal-hint').textContent = pattern ? `Destacado (●): ${pattern.name}, ${stats.ratio}` : 'Clique em um dia para ver o detalhe.';
+  const panel = document.getElementById('cal-panel');
+  const anchor = cells.filter((c) => c.classList.contains('hit')).at(-1) ?? cells.find((c) => c.classList.contains('sel'));
+  if (anchor && panel.scrollHeight > panel.clientHeight) panel.scrollTop = Math.max(0, anchor.offsetTop + anchor.closest('.cal').offsetTop - panel.clientHeight / 2);
+}
+function renderHighlightWindow(title, days) {
+  const from = addDays(state.to, -(days - 1));
+  const list = (sign, heading) => {
+    const items = highlights(from, state.to, sign);
+    return [
+      el('h4', { text: heading }),
+      ...(items.length ? items.map((p, index) => {
+        const button = el('button', { type: 'button', class: 'hl', 'data-highlight': p.id }, el('b', { text: `${sign > 0 ? '▲' : '▼'} ${p.name}` }),
+          el('span', { class: 'why', text: positionText(p, index) }),
+          el('span', { text: `${p.events.length} no histórico · ${impactText(p)}` }),
+          ...(ACTION_BY_ID[p.id] ? [el('span', { class: 'why', text: `→ ${ACTION_BY_ID[p.id].text}` })] : []));
+        button.addEventListener('click', () => selectPattern(p.id));
+        return button;
+      }) : [el('p', { class: 'note', text: `${NONE}: nenhum padrão elegível nesta janela` })]),
+    ];
+  };
+  return el('article', { class: 'window' }, el('h3', { text: `${title}: ${short(from)} a ${short(state.to)}` }), ...list(1, 'Positivos'), ...list(-1, 'Negativos'));
+}
+function renderPatterns() {
+  fill('highlights', renderHighlightWindow('Semana', 7), renderHighlightWindow('Mês', 30));
+  const counted = PATTERNS.map((p) => ({ ...p, ...periodStats(p) }));
+  const shown = counted.filter((p) => p.count >= MIN_OCCURRENCES).sort((a, b) => b.sign - a.sign || b.count - a.count);
+  const selected = counted.find((p) => p.id === state.pattern);
+  const visible = selected && !shown.includes(selected) ? [selected, ...shown] : shown;
+  fill('pattern-stat', `${shown.length} de ${counted.length} regras com 10 ou mais ocorrências`);
+  const rows = visible.flatMap((p) => {
+    const open = p.id === state.pattern;
+    const label = el('span', {}, p.name, ...(p.water ? [el('span', { class: 'warn', text: 'poucos registros' })] : []));
+    const button = el('button', { type: 'button', class: 'pat', 'data-pattern': p.id, 'aria-expanded': String(open) },
+      el('span', { class: 'tag', text: signText(p) }), label, el('em', { text: String(p.count) }));
+    button.addEventListener('click', () => selectPattern(p.id));
+    if (!open) return [button];
+    const more = el('div', { class: 'pat-more', id: 'pat-more' }, el('span', { class: 'count', text: p.ratio }), el('div', { text: `Regra: ${p.rule}` }),
+      el('div', { text: impactText(p) }), actionBlock(p.id));
+    more.append(el('div', { class: 'pat-days', id: 'pat-days', text: p.marks.size ? `Dias destacados: ${runs([...p.marks].sort())}` : 'Dias destacados: nenhum neste período' }));
+    return [button, more];
+  });
+  if (rows.length) fill('patterns', ...rows);
+  else fill('patterns', el('p', { class: 'empty', text: 'Nenhum padrão com 10 ou mais ocorrências neste período. Escolha um período maior.' }));
+  fill('rules', table(['Padrão', 'Regra', 'Tipo', 'Ocorrências no período'], counted.filter((p) => shown.includes(p)).map((p) => ({ cells: [p.name, p.rule, signText(p), p.ratio] }))));
+}
+
+const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+function fullBuckets() {
+  const byMonth = ms(state.to) - ms(state.from) > 120 * 86400000;
+  const out = [];
+  if (byMonth) {
+    for (let start = `${state.from.slice(0, 7)}-01`; start <= state.to;) {
+      const next = new Date(Date.UTC(+start.slice(0, 4), +start.slice(5, 7), 1)).toISOString().slice(0, 10);
+      out.push({ start, end: addDays(next, -1), label: `${MONTHS[+start.slice(5, 7) - 1]}/${start.slice(2, 4)}` });
+      start = next;
+    }
+  } else {
+    for (let start = monday(state.from); start <= state.to; start = addDays(start, 7)) {
+      out.push({ start, end: addDays(start, 6), label: `sem. ${short(start)}` });
+    }
+  }
+  return { kind: byMonth ? 'meses' : 'semanas', list: out.filter((b) => b.start >= state.from && b.end <= state.to && b.start >= firstDay && b.end < today) };
+}
+function rankRows(metric, buckets) {
+  return buckets.map((b) => ({ ...b, ...metric(eachDay(b.start, b.end).map((d) => dayIndex.get(d) ?? {}), b) })).filter((b) => b.value != null);
+}
+function rankMetrics() {
+  return [
+    { title: 'Sono', color: '--sleep', metric: (records) => {
+      const nights = records.filter((r) => r.sleep?.score != null);
+      if (nights.length < 3) return { value: null };
+      const value = mean(nights.map((r) => r.sleep.score));
+      return { value, text: `score ${num(value)} · ${hm(mean(nights.map((r) => r.sleep.sec)))}` };
+    } },
+    { title: 'Volume', color: '--train', metric: (_, b) => {
+      const value = DATA.activities.filter((a) => a.d >= b.start && a.d <= b.end).reduce((s, a) => s + a.sec, 0);
+      return { value, text: hm(value) };
+    } },
+    { title: 'Hidratação', color: '--water', metric: (records) => {
+      const days = records.filter((r) => r.water?.goal);
+      if (days.length < 3) return { value: null };
+      const value = mean(days.map((r) => (100 * r.water.ml) / r.water.goal));
+      return { value, text: `${num(value)}% da meta · ${days.length} dias` };
+    } },
+  ];
+}
+function renderRanks() {
+  const { kind, list } = fullBuckets();
+  fill('rank-stat', `Por ${kind} · ${list.length} completos no período`);
+  fill('ranks', ...rankMetrics().map(({ title, color, metric }) => {
+    const rows = rankRows(metric, list).sort((a, b) => b.value - a.value);
+    if (rows.length < 2) {
+      return el('article', { class: 'rank' }, el('h3', { text: title }), el('p', { class: 'note', text: `${NONE}: precisa de pelo menos 2 ${kind} completos com dado` }));
+    }
+    const top = Math.max(...rows.map((r) => r.value)) || 1;
+    const size = Math.min(3, Math.floor(rows.length / 2));
+    const row = (r) => el('div', { class: 'bar-row' }, el('span', { class: 'label', text: r.label }),
+      el('span', { class: 'bar-track' }, el('i', { class: 'bar', style: `width:${Math.round((40 * r.value) / top)}%;background:${css(color)}` }), el('span', { class: 'amount', text: r.text })));
+    return el('article', { class: 'rank' }, el('h3', { text: title }), el('h4', { text: 'Melhores' }), ...rows.slice(0, size).map(row),
+      el('h4', { text: 'Piores' }), ...rows.slice(-size).reverse().map(row));
+  }));
+}
+
+// ---------- Etapa 3: resumo da semana e plano de natacao ----------
+// Tudo por regras fixas (sem IA, sem rede). Cada numero de entrada aparece na tela.
+const BASE_DAYS = 60;
+const MIN_BASE_VALUES = 20;
+const MIN_WEEK_VALUES = 3;
+const LOAD_LIMIT = 1.3;
+const SHORT_SLEEP = 25200;
+const MAX_PROGRESS = 1.1;
+const MIN_SESSION_M = 500;
+const sd = (list) => { const m = mean(list); return Math.sqrt(mean(list.map((v) => (v - m) ** 2))); };
+const sumSec = (list) => list.reduce((s, a) => s + a.sec, 0);
+const sumM = (list) => list.reduce((s, a) => s + a.m, 0);
+const actsBetween = (from, to) => DATA.activities.filter((a) => a.d >= from && a.d <= to);
+const dayName = (d) => WEEKDAYS[weekday(d)];
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+// Semana de referencia (segunda a domingo): a que contem o fim do periodo selecionado,
+// se ja passaram pelo menos 5 dias dela; senao, a semana anterior (completa).
+function referenceWeek(endDate = state.to) {
+  const end = endDate < today ? endDate : today;
+  let start = monday(end);
+  let last = end;
+  if (ms(end) - ms(start) < 4 * 86400000) {
+    start = addDays(start, -7);
+    last = addDays(start, 6);
+  }
+  if (last < firstDay) return null;
+  const elapsed = Math.round((ms(last) - ms(start)) / 86400000) + 1;
+  return { start, last, elapsed, partial: elapsed < 7, next: addDays(start, 7) };
+}
+
+function weekFacts(ref) {
+  const rec = (d) => dayIndex.get(d) ?? {};
+  const days = eachDay(ref.start, ref.last);
+  const acts = actsBetween(ref.start, ref.last);
+  const sameDays = (shift) => actsBetween(addDays(ref.start, -shift), addDays(ref.last, -shift));
+  const prevSec = sumSec(sameDays(7));
+  const baseDays = eachDay(addDays(ref.start, -BASE_DAYS), addDays(ref.start, -1));
+  const vals = (list, pick) => list.map((d) => pick(rec(d))).filter((v) => v != null);
+
+  const signals = [];
+  const personal = (id, name, pick, fmt) => {
+    const week = vals(days, pick);
+    const base = vals(baseDays, pick);
+    const rule = `Média da semana abaixo da média dos ${BASE_DAYS} dias anteriores menos 1 desvio-padrão (mínimo ${MIN_WEEK_VALUES} dias na semana e ${MIN_BASE_VALUES} no histórico)`;
+    if (week.length < MIN_WEEK_VALUES || base.length < MIN_BASE_VALUES) {
+      signals.push({ id, name, rule, status: 'sem dados', value: NONE, ref: `${week.length} dias na semana, ${base.length} no histórico` });
+      return;
+    }
+    const limit = mean(base) - sd(base);
+    const value = mean(week);
+    signals.push({ id, name, rule, status: value < limit ? 'sinal' : 'ok', value: fmt(value), ref: `limite ${fmt(limit)} (média ${fmt(mean(base))})`, limit: fmt(limit) });
+  };
+  personal('hrv', 'HRV', (r) => r.hrv, (v) => `${num(v)} ms`);
+
+  const nights = vals(days, (r) => r.sleep?.sec);
+  const shortNights = nights.filter((s) => s < SHORT_SLEEP).length;
+  signals.push({
+    id: 'sono', name: 'Sono curto', rule: `Duração média das noites da semana abaixo de 7 h (mínimo ${MIN_WEEK_VALUES} noites)`,
+    status: nights.length < MIN_WEEK_VALUES ? 'sem dados' : mean(nights) < SHORT_SLEEP ? 'sinal' : 'ok',
+    value: nights.length < MIN_WEEK_VALUES ? NONE : hm(mean(nights)),
+    ref: `limite 7h00 · ${shortNights} de ${plural(nights.length, 'noite', 'noites')} abaixo de 7 h`, limit: '7h00',
+  });
+
+  personal('battery', 'Body Battery baixo', (r) => r.battery, (v) => num(v));
+
+  const priorLoads = [7, 14, 21, 28].map((s) => sumSec(sameDays(s)));
+  const loadBase = mean(priorLoads);
+  const weekSec = sumSec(acts);
+  const loadKnown = addDays(ref.start, -28) >= firstDay && loadBase > 0;
+  signals.push({
+    id: 'carga', name: 'Carga alta', rule: `Tempo de treino da semana mais de ${Math.round((LOAD_LIMIT - 1) * 100)}% acima da média das 4 semanas anteriores (mesmos ${ref.elapsed} dias de cada uma)`,
+    status: !loadKnown ? 'sem dados' : weekSec > loadBase * LOAD_LIMIT ? 'sinal' : 'ok',
+    value: hm(weekSec), ref: loadKnown ? `limite ${hm(loadBase * LOAD_LIMIT)} (média ${hm(loadBase)})` : 'sem treinos ou histórico nas 4 semanas anteriores', limit: loadKnown ? hm(loadBase * LOAD_LIMIT) : null,
+  });
+
+  const fired = signals.filter((s) => s.status === 'sinal');
+  const evaluable = signals.filter((s) => s.status !== 'sem dados').length;
+  const level = fired.length >= 2 ? 'descansar' : fired.length === 1 ? 'atencao' : 'ok';
+
+  // Treinos
+  const trainedDays = new Set(acts.map((a) => a.d));
+  let longestOff = 0;
+  let off = 0;
+  for (const d of days) {
+    off = trainedDays.has(d) ? 0 : off + 1;
+    longestOff = Math.max(longestOff, off);
+  }
+  const byCat = CATS.map((c) => {
+    const list = acts.filter((a) => a.cat === c.key);
+    if (!list.length) return null;
+    return `${c.name} ${list.length}${c.pace ? ` (${num(sumM(list) / 1000, 1)} km)` : ''}`;
+  }).filter(Boolean).join(', ');
+  const swims = acts.filter((a) => a.cat === 'natacao' && a.m > 0);
+  const training = [];
+  if (!acts.length) {
+    training.push('Nenhum treino registrado nesta semana.');
+  } else {
+    training.push(`${plural(acts.length, 'sessão', 'sessões')} em ${trainedDays.size} de ${ref.elapsed} dias, ${hm(weekSec)} no total.`);
+    training.push(`Por tipo: ${byCat}.`);
+  }
+  if (prevSec > 0) {
+    const pct = Math.round((100 * (weekSec - prevSec)) / prevSec);
+    training.push(`Tempo de treino ${pct >= 0 ? '+' : ''}${pct}% em relação aos mesmos ${ref.elapsed} dias da semana anterior (${hm(prevSec)}).`);
+  } else {
+    training.push(`Semana anterior sem treinos nos mesmos ${ref.elapsed} dias: sem base de comparação.`);
+  }
+  if (swims.length) training.push(`Natação: ${plural(swims.length, 'sessão', 'sessões')}, ${num(sumM(swims) / 1000, 2)} km, ${pace(swims.reduce((s, a) => s + paceSec(a), 0), sumM(swims), 100)} min/100 m.`);
+  if (longestOff >= 3) training.push(`Maior sequência sem treino: ${longestOff} dias.`);
+
+  // Ajustes para a semana seguinte
+  const has = (id) => fired.some((s) => s.id === id);
+  const adjust = [];
+  if (fired.length >= 2) adjust.push('Reduzir o tempo total de treino em cerca de 20% a 30% e incluir pelo menos 2 dias sem treino; priorizar sessões leves.');
+  else if (fired.length === 1) adjust.push('Manter o volume desta semana, sem progredir; preferir sessões de intensidade baixa a moderada.');
+  else if (evaluable >= 3) adjust.push('Sem sinais de descanso: dá para progredir, no máximo 10% sobre o tempo desta semana.');
+  else adjust.push('Poucos sinais com dados nesta semana: manter o volume até haver mais registros.');
+  if (has('sono')) {
+    const tip = ACTION_BY_ID['sono-curto'];
+    adjust.push(`Sono: tentar dormir 7 h ou mais nas próximas noites antes de aumentar a intensidade.${tip ? ` ${tip.text} ${tip.fact}` : ''}`);
+  }
+  if (has('hrv')) adjust.push('HRV abaixo do seu normal: evitar treinos de alta intensidade até ele voltar à faixa.');
+  if (has('battery')) adjust.push('Body Battery baixo: incluir um dia leve ou de descanso no meio da semana.');
+  if (has('carga')) adjust.push('Carga subiu mais de 30% sobre as semanas anteriores: não aumentar o volume agora.');
+  if (trainedDays.size >= 6) adjust.push('Treinou em 6 dias ou mais: incluir pelo menos 1 dia sem treino.');
+  if (ref.elapsed >= 5 && trainedDays.size <= 1) adjust.push('Semana com poucos treinos: retomar aos poucos, sem salto de volume.');
+  const water = days.filter((d) => d < today && rec(d).water?.goal).map((d) => rec(d).water);
+  const lowWater = water.filter((w) => w.ml < w.goal).length;
+  if (water.length >= 3 && lowWater * 2 >= water.length) adjust.push(`Hidratação abaixo da meta em ${lowWater} de ${water.length} dias com registro: reforçar a água.`);
+
+  // Comparativo com os mesmos dias da semana anterior (alimenta o bloco do topo).
+  const prevDays = eachDay(addDays(ref.start, -7), addDays(ref.last, -7));
+  const prevNights = vals(prevDays, (r) => r.sleep?.sec);
+  const weekHrv = vals(days, (r) => r.hrv);
+  const prevHrv = vals(prevDays, (r) => r.hrv);
+  const sign = (v) => (v >= 0 ? '+' : '−');
+  const trend = (diff, tolerance) => (Math.abs(diff) <= tolerance ? 'igual' : diff > 0 ? 'mais' : 'menos');
+  const trainPct = prevSec > 0 ? Math.round((100 * (weekSec - prevSec)) / prevSec) : null;
+  const sleepDiff = nights.length >= MIN_WEEK_VALUES && prevNights.length >= MIN_WEEK_VALUES ? Math.round((mean(nights) - mean(prevNights)) / 60) : null;
+  const hrvDiff = weekHrv.length >= MIN_WEEK_VALUES && prevHrv.length >= MIN_WEEK_VALUES ? mean(weekHrv) - mean(prevHrv) : null;
+  const compare = [
+    { name: 'Tempo de treino', value: hm(weekSec), delta: trainPct == null ? NONE : `${sign(trainPct)}${Math.abs(trainPct)}%`, trend: trainPct == null ? null : trend(trainPct, 5) },
+    { name: 'Sono médio', value: nights.length >= MIN_WEEK_VALUES ? hm(mean(nights)) : NONE, delta: sleepDiff == null ? NONE : `${sign(sleepDiff)}${Math.abs(sleepDiff)} min`, trend: sleepDiff == null ? null : trend(sleepDiff, 10) },
+    { name: 'HRV médio', value: weekHrv.length >= MIN_WEEK_VALUES ? `${num(mean(weekHrv))} ms` : NONE, delta: hrvDiff == null ? NONE : `${sign(hrvDiff)}${num(Math.abs(hrvDiff))} ms`, trend: hrvDiff == null ? null : trend(hrvDiff, 2) },
+  ];
+
+  return { signals, fired: fired.length, evaluable, level, training, adjust, compare };
+}
+
+const LEVEL_TEXT = {
+  descansar: 'os dados indicam necessidade de descanso',
+  atencao: 'atenção, 1 sinal de descanso',
+  ok: 'nenhum sinal de descanso',
+};
+const STATUS_TEXT = { sinal: '● Sinal', ok: 'Ok', 'sem dados': NONE };
+const bullets = (items) => el('ul', {}, ...items.map((t) => el('li', { text: t })));
+
+const SIGNAL_PHRASE = { sono: 'do sono', hrv: 'do HRV', battery: 'da Body Battery', carga: 'da carga de treino' };
+function nowHeadline(facts) {
+  if (facts.level === 'descansar') return 'Priorize o descanso esta semana';
+  if (facts.level === 'atencao') return `Mantenha o volume e cuide ${SIGNAL_PHRASE[facts.signals.find((s) => s.status === 'sinal')?.id] ?? 'de 1 ponto'}`;
+  return 'Sem sinais de alerta: dá para progredir com cuidado';
+}
+const splitAction = (text) => { const i = text.indexOf('. '); return i > 0 ? [text.slice(0, i), text.slice(i + 2)] : [text.replace(/\.$/, ''), '']; };
+const TREND_ARROW = { mais: '▲', menos: '▼', igual: '=' };
+const TREND_CLASS = { mais: 'good', menos: 'bad', igual: '' };
+
+// Tela "Hoje": cartao do veredito e cartao "O que fazer agora". Usa os mesmos fatos do resumo da semana.
+function renderNow() {
+  const { ref, facts } = weekCtx;
+  const firedSignals = facts.signals.filter((s) => s.status === 'sinal');
+  const reason = firedSignals.length
+    ? `Sinais disparados: ${firedSignals.map((s) => `${s.name.toLowerCase()} (${s.value})`).join('; ')}.`
+    : `Nenhum dos ${facts.evaluable} sinais avaliados disparou${facts.evaluable < 3 ? ' (poucos dados nesta semana)' : ''}.`;
+  const chip = facts.level === 'descansar' ? ['Descansar', 'bad'] : facts.level === 'atencao' ? [`Atenção, ${plural(facts.fired, 'sinal', 'sinais')}`, 'warn'] : ['Em dia', 'ok'];
+  const metrics = facts.compare.map((c) => el('div', { class: 'metric' },
+    el('p', { class: 'lab', text: c.name }), el('p', { class: 'val', text: c.value }),
+    el('p', { class: `del ${c.trend ? TREND_CLASS[c.trend] : ''}`, text: c.trend ? `${TREND_ARROW[c.trend]} ${c.delta} vs. semana anterior` : `${c.delta} vs. semana anterior` })));
+  fill('now',
+    el('p', { class: 'now-top' }, el('span', { class: `pill ${chip[1]}`, text: chip[0] }),
+      el('span', { class: 'kick', text: `Semana de ${short(ref.start)} a ${short(ref.last)}${ref.partial ? `, em andamento (${ref.elapsed} de 7 dias)` : ''}` })),
+    el('h1', { class: 'now-title', text: nowHeadline(facts) }),
+    el('p', { class: 'now-reason', text: reason }),
+    el('div', { class: 'metrics' }, ...metrics),
+    el('p', { class: 'note', text: `Comparado aos mesmos ${ref.elapsed} dias da semana anterior. "Igual" = dentro de 5% no treino, 10 min no sono e 2 ms no HRV.` }));
+
+  const perfAlerts = perfHighlights(perfFacts(28));
+  const go = el('button', { type: 'button', class: 'go', text: 'Gerar treino de hoje' });
+  go.addEventListener('click', () => {
+    daily.shown = true;
+    renderDaily();
+    document.getElementById('daily').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
+  const rows = facts.adjust.slice(0, 3).map((text, i) => {
+    const [title, detail] = splitAction(text);
+    return el('div', { class: 'act' }, el('span', { class: 'num', text: String(i + 1) }),
+      el('div', {}, el('p', { class: 'act-title', text: title }), ...(detail ? [el('p', { class: 'act-detail', text: detail })] : [])));
+  });
+  const more = facts.adjust.length > 3 ? ` (+${facts.adjust.length - 3})` : '';
+  fill('actions',
+    el('div', { class: 'card-head' }, el('h2', { text: 'O que fazer agora' }), go),
+    ...rows,
+    ...(perfAlerts.length ? [el('div', { class: 'now-alerts' }, ...perfAlerts.map((t) => el('div', { text: t })))] : []),
+    el('p', { class: 'note' }, 'Sugestão automática por regras, não é treinador. ',
+      el('a', { href: '#week-panel', text: `Resumo da semana${more}` }), ' · ', el('a', { href: '#perf-panel', text: 'Desempenho por tipo' }), ' · ',
+      el('a', { href: '#coach-panel', text: 'Treinador de natação' }), ' · ', el('a', { href: '#plan-panel', text: 'Plano de natação' })));
+}
+
+// Resumo do desempenho na tela "Hoje": os 4 tipos mais frequentes, com a musculacao resumida por treino.
+function renderHomePerf() {
+  const perf = perfFacts(28);
+  if (perf.noHistory || !perf.types.length) {
+    fill('home-perf', el('div', { class: 'card-head' }, el('h2', { text: 'Desempenho por tipo' })), el('p', { class: 'note', text: `${NONE} anteriores suficientes para comparar neste período.` }));
+    return;
+  }
+  const typeCard = (t) => {
+    const key = t.rows.find((r) => r.better !== 0 && (r.read === 'melhor' || r.read === 'pior')) ?? t.rows.find((r) => r.id === 'time') ?? t.rows[0];
+    const lines = [key ? `${key.name} ${key.fmt(key.p)} → ${key.fmt(key.r)}` : `${plural(t.nR, 'sessão', 'sessões')} contra ${t.nP}`];
+    if (t.routines?.length) {
+      const up = t.routines.reduce((s, g) => s + g.up, 0);
+      const down = t.routines.reduce((s, g) => s + g.down, 0);
+      lines.push(`Exercícios: ${up} subiram, ${down} caíram em ${plural(t.routines.length, 'treino', 'treinos')}`);
+    } else if (t.absent) lines.push(`Sem treino há ${plural(t.daysSince, 'dia', 'dias')}`);
+    else lines.push(`${plural(t.nR, 'sessão', 'sessões')} contra ${t.nP}, última ${short(t.last)}`);
+    return el('div', { class: 'type-card' }, el('p', { class: 'type-head' }, el('span', { text: t.name }), stateChip(t.state)), ...lines.map((l) => el('p', { class: 'type-line', text: l })));
+  };
+  fill('home-perf',
+    el('div', { class: 'card-head' }, el('h2', { text: 'Desempenho por tipo' }), el('span', { class: 'stat', text: `${PERF_DAYS} dias contra os ${PERF_DAYS} anteriores` })),
+    el('div', { class: 'home-grid' }, ...perf.types.slice(0, 4).map(typeCard)),
+    el('p', { class: 'note' }, el('a', { href: '#desempenho', text: 'Ver todos os tipos e exercícios →' })));
+}
+
+let weekCtx = null;
+function renderWeek() {
+  weekCtx = null;
+  const ref = referenceWeek();
+  if (!ref) {
+    fill('now', el('p', { class: 'empty', text: `${NONE} suficientes para o resumo neste período.` }));
+    fill('actions');
+    fill('week-stat', '');
+    fill('coach-stat', '');
+    fill('coach', el('p', { class: 'empty', text: NONE }));
+    fill('daily');
+    fill('week', el('p', { class: 'empty', text: NONE }));
+    fill('plan-stat', '');
+    fill('plan', el('p', { class: 'empty', text: NONE }));
+    return;
+  }
+  const facts = weekFacts(ref);
+  weekCtx = { ref, facts, coach: coachFacts(ref) };
+  renderNow();
+  fill('week-stat', `${full(ref.start)} a ${full(ref.last)}${ref.partial ? ` · em andamento, ${ref.elapsed} de 7 dias` : ''}`);
+
+  const firedList = facts.signals.filter((s) => s.status === 'sinal').map((s) => `${s.name}: ${s.value} (${s.ref}).`);
+  const verdict = el('p', { class: 'verdict' }, 'Descanso: ', el('strong', { text: LEVEL_TEXT[facts.level] }),
+    ` · sinais disparados: ${facts.fired} de ${facts.evaluable} avaliáveis.`);
+  const grid = el('div', { class: 'week-grid' },
+    el('div', {}, el('h3', { text: 'Como foram os treinos' }), bullets(facts.training)),
+    el('div', {}, el('h3', { text: 'O que indica descanso' }),
+      bullets(firedList.length ? firedList : [facts.evaluable ? 'Nenhum dos sinais avaliados foi disparado.' : `${NONE} suficientes para avaliar os sinais.`])),
+    el('div', {}, el('h3', { text: 'O que ajustar na semana seguinte' }), bullets(facts.adjust)));
+  const rows = facts.signals.map((s) => ({ cells: [s.name, s.rule, s.value, s.ref, el('span', { class: 'chip', text: STATUS_TEXT[s.status] })] }));
+  const details = el('details', {}, el('summary', { text: 'Ver os 4 sinais, as regras e os valores' }),
+    el('div', { class: 'wrap' }, table(['Sinal', 'Regra', 'Na semana', 'Referência', 'Situação'], rows)),
+    el('p', { class: 'note', text: 'Dois ou mais sinais disparados = descansar; um = atenção. Sinal sem dados suficientes não conta. Semana em andamento é comparada com os mesmos dias das semanas anteriores.' }));
+  fill('week', verdict, grid, details);
+  renderCoach();
+  renderDaily();
+  renderPlan();
+}
+
+// ----- desempenho por tipo de treino: ganho, queda e ausencia -----
+// Compara os ultimos 28 dias com os 28 anteriores (terminando no fim do periodo selecionado, no maximo hoje).
+// So entra tipo com pelo menos 3 sessoes nos ultimos 180 dias; metrica por sessao precisa de 3 sessoes em cada janela.
+let PERF_DAYS = 28; // tamanho da janela em dias: perfFacts() ajusta conforme o filtro de periodo
+const PERF_MIN_DAYS = 7;
+const PERF_MAX_DAYS = 365;
+const PERF_MIN = 3;
+const PERF_ACTIVE_DAYS = 180;
+const PERF_ABSENCE_DAYS = 14;
+const PERF_EXERCISE_PCT = 5;
+const PERF_TYPES = ['natacao', 'musculacao', 'corrida', 'futebol', 'cardio', 'ciclismo'];
+const EXERCISES = {
+  PULL_UP: 'Barra fixa', BENCH_PRESS: 'Supino', CURL: 'Rosca', ROW: 'Remada', TRICEPS_EXTENSION: 'Tríceps', SQUAT: 'Agachamento',
+  SHOULDER_PRESS: 'Desenvolvimento', FLYE: 'Crucifixo', LATERAL_RAISE: 'Elevação lateral', HIP_STABILITY: 'Estabilidade de quadril',
+  LEG_CURL: 'Flexora', HYPEREXTENSION: 'Hiperextensão', DEADLIFT: 'Levantamento terra', CALF_RAISE: 'Panturrilha', CRUNCH: 'Abdominal', LUNGE: 'Avanço',
+};
+const EXERCISE_SKIP = new Set(['CARDIO', 'UNKNOWN', 'WARM_UP', 'BANDED_EXERCISES']);
+const exerciseName = (key) => EXERCISES[key] ?? key.toLowerCase().replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+const daysBetween = (a, b) => Math.round((ms(b) - ms(a)) / 86400000);
+const catOf = (key) => CATS.find((c) => c.key === key);
+
+// better: -1 = menor e melhor, +1 = maior e melhor, 0 = so informativo. tol = diferenca ainda "igual"; rel = fracao do valor anterior.
+const PERF_METRICS = {
+  natacao: [
+    { id: 'pace', name: 'Ritmo em movimento', pick: (a) => (a.mv > 0 && a.m > 0 ? a.mv / (a.m / 100) : null), fmt: (v) => `${mmss(v)} /100 m`, diff: (d) => `${signedNum(d, 1)} s/100 m`, better: -1, tol: 2 },
+    { id: 'swolf', name: 'SWOLF', pick: (a) => a.sw ?? null, fmt: (v) => num(v, 1), diff: (d) => signedNum(d, 1), better: -1, tol: 1 },
+    { id: 'strokes', name: 'Braçadas por piscina', pick: (a) => a.st ?? null, fmt: (v) => num(v, 1), diff: (d) => signedNum(d, 1), better: -1, tol: 0.5 },
+    { id: 'hr', name: 'FC média', pick: (a) => a.hr ?? null, fmt: (v) => `${num(v)} bpm`, diff: (d) => `${signedNum(d)} bpm`, better: 0, tol: 2 },
+  ],
+  corrida: [
+    { id: 'pace', name: 'Ritmo', pick: (a) => (a.sec > 0 && a.m > 0 ? a.sec / (a.m / 1000) : null), fmt: (v) => `${mmss(v)} /km`, diff: (d) => `${signedNum(d)} s/km`, better: -1, tol: 5 },
+    { id: 'hr', name: 'FC média', pick: (a) => a.hr ?? null, fmt: (v) => `${num(v)} bpm`, diff: (d) => `${signedNum(d)} bpm`, better: 0, tol: 2 },
+    { id: 'cad', name: 'Cadência', pick: (a) => a.cad ?? null, fmt: (v) => `${num(v)} passos/min`, diff: (d) => signedNum(d), better: 0, tol: 2 },
+  ],
+  musculacao: [
+    { id: 'sets', name: 'Séries por treino', pick: (a) => a.sets ?? null, fmt: (v) => num(v, 1), diff: (d) => signedNum(d, 1), better: 1, rel: 0.1 },
+    { id: 'reps', name: 'Repetições por treino', pick: (a) => a.reps ?? null, fmt: (v) => num(v), diff: (d) => signedNum(d), better: 1, rel: 0.1 },
+    { id: 'vol', name: 'Volume por treino (carga × repetições)', pick: (a) => a.vol ?? null, fmt: (v) => `${num(v)} kg`, diff: (d) => `${signedNum(d)} kg`, better: 1, rel: 0.1 },
+    { id: 'hr', name: 'FC média', pick: (a) => a.hr ?? null, fmt: (v) => `${num(v)} bpm`, diff: (d) => `${signedNum(d)} bpm`, better: 0, tol: 2 },
+  ],
+  futebol: [{ id: 'hr', name: 'FC média', pick: (a) => a.hr ?? null, fmt: (v) => `${num(v)} bpm`, diff: (d) => `${signedNum(d)} bpm`, better: 0, tol: 2 }],
+  cardio: [{ id: 'hr', name: 'FC média', pick: (a) => a.hr ?? null, fmt: (v) => `${num(v)} bpm`, diff: (d) => `${signedNum(d)} bpm`, better: 0, tol: 2 }],
+  ciclismo: [{ id: 'hr', name: 'FC média', pick: (a) => a.hr ?? null, fmt: (v) => `${num(v)} bpm`, diff: (d) => `${signedNum(d)} bpm`, better: 0, tol: 2 }],
+};
+
+function perfRead(metric, r, p) {
+  if (r == null || p == null) return null;
+  const diff = r - p;
+  const tol = metric.rel ? Math.abs(p) * metric.rel : metric.tol;
+  if (Math.abs(diff) <= tol) return 'igual';
+  if (metric.better === 0) return diff > 0 ? 'mais' : 'menos';
+  return diff * metric.better > 0 ? 'melhor' : 'pior';
+}
+const medianOf = (list) => { const s = [...list].sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : null; };
+
+// Linhas de volume (por semana) comuns a todos os tipos; "better" +1 = mais e melhor (constancia).
+function volumeRows(type, R, P, nR, nP) {
+  const weeks = PERF_DAYS / 7;
+  const countTol = Math.max(1, 0.2 * nP) / weeks;
+  const rows = [
+    { id: 'freq', name: 'Sessões por semana', r: nR / weeks, p: nP / weeks, fmt: (v) => num(v, 1), diff: (d) => signedNum(d, 1), better: 1, tol: countTol },
+    { id: 'time', name: 'Tempo por semana', r: sumSec(R) / 60 / weeks, p: sumSec(P) / 60 / weeks, fmt: (v) => hm(v * 60), diff: (d) => `${signedNum(d)} min`, better: 1, rel: 0.15 },
+  ];
+  if (type === 'natacao') rows.push({ id: 'dist', name: 'Distância por semana', r: sumM(R) / weeks, p: sumM(P) / weeks, fmt: (v) => `${num(v)} m`, diff: (d) => `${signedNum(d)} m`, better: 1, rel: 0.15 });
+  if (type === 'corrida') rows.push({ id: 'dist', name: 'Distância por semana', r: sumM(R) / 1000 / weeks, p: sumM(P) / 1000 / weeks, fmt: (v) => `${num(v, 1)} km`, diff: (d) => `${signedNum(d, 1)} km`, better: 1, rel: 0.15 });
+  if (type === 'musculacao') {
+    const volume = (list) => list.reduce((s, a) => s + (a.vol ?? 0), 0);
+    rows.push({ id: 'volw', name: 'Volume por semana', r: volume(R) / weeks, p: volume(P) / weeks, fmt: (v) => `${num(v)} kg`, diff: (d) => `${signedNum(d)} kg`, better: 1, rel: 0.15 });
+  }
+  return rows;
+}
+
+// Musculacao por treino (Treino 1, 2 e 3): as fases antigas do mesmo treino ("Perna", "Dorsais bíceps", "Peito Tríceps") entram na mesma rotina.
+const ROUTINE_ORDER = ['inferiores', 'costas', 'peito', 'outros'];
+const ROUTINE_LABELS = { inferiores: 'Membros inferiores', costas: 'Costas e bíceps', peito: 'Peito, ombro e tríceps', outros: 'Outros treinos de musculação' };
+function routineKey(name) {
+  const n = (name ?? '').toLowerCase();
+  if (/perna|inferior/.test(n)) return 'inferiores';
+  if (/peito/.test(n)) return 'peito';
+  if (/dorsa|costas/.test(n)) return 'costas';
+  return 'outros';
+}
+// Por exercicio e por treino: [series, repeticoes, carga maxima kg, volume kg]; cada metrica precisa de 2 treinos com valor.
+function exerciseStats(sessions, key) {
+  const entries = sessions.map((a) => a.ex?.[key]).filter(Boolean);
+  const col = (i) => { const v = entries.map((e) => e[i]).filter((x) => x > 0); return v.length >= 2 ? mean(v) : null; };
+  return { n: entries.length, sets: col(0), reps: col(1), kg: col(2), vol: col(3) };
+}
+const relPct = (r, p) => ((r - p) / p) * 100;
+const pctText2 = (r, p) => (Math.abs(relPct(r, p)) < 0.5 ? '0%' : `${r >= p ? '+' : '−'}${num(Math.abs(relPct(r, p)))}%`);
+const EX_METRICS = [
+  { id: 'kg', name: 'Carga máx.', fmt: (v) => `${num(v, 1)} kg`, delta: pctText2, step: relPct, tol: PERF_EXERCISE_PCT },
+  { id: 'sets', name: 'Séries por treino', fmt: (v) => num(v, 1), delta: (r, p) => (Math.abs(r - p) < 0.05 ? '0' : signedNum(r - p, 1)), step: (r, p) => r - p, tol: 0.5 },
+  { id: 'reps', name: 'Repetições por treino', fmt: (v) => num(v), delta: pctText2, step: relPct, tol: 10 },
+  { id: 'vol', name: 'Volume por treino', fmt: (v) => `${num(v)} kg`, delta: pctText2, step: relPct, tol: 10 },
+];
+const EX_STATE_ORDER = ['caiu', 'parou', 'misto', 'subiu', 'novo', 'igual'];
+function routineChanges(R, P) {
+  const everyone = [...R, ...P];
+  return ROUTINE_ORDER.filter((key) => everyone.some((a) => routineKey(a.nm) === key)).map((key) => {
+    const sr = R.filter((a) => routineKey(a.nm) === key);
+    const sp = P.filter((a) => routineKey(a.nm) === key);
+    const latest = [...sp, ...sr].sort((a, b) => `${a.d}${a.t}`.localeCompare(`${b.d}${b.t}`)).at(-1);
+    const label = latest.nm && key !== 'outros' ? latest.nm : ROUTINE_LABELS[key];
+    const exKeys = new Set([...sr, ...sp].flatMap((a) => Object.keys(a.ex ?? {})).filter((k) => !EXERCISE_SKIP.has(k)));
+    const rows = [];
+    for (const k of exKeys) {
+      const r = exerciseStats(sr, k);
+      const p = exerciseStats(sp, k);
+      if (r.n === 0 && p.n >= 2 && sr.length >= 2) { rows.push({ key: k, state: 'parou', before: p.n }); continue; }
+      if (p.n === 0 && r.n >= 2 && sp.length >= 2) { rows.push({ key: k, state: 'novo', now: r.n }); continue; }
+      if (r.n < 2 || p.n < 2) continue;
+      const cells = EX_METRICS.map((m) => {
+        const rv = r[m.id];
+        const pv = p[m.id];
+        if (rv == null || pv == null) return { m, rv, pv, dir: null };
+        const change = m.step(rv, pv);
+        return { m, rv, pv, dir: change >= m.tol ? 'up' : change <= -m.tol ? 'down' : 'same' };
+      });
+      const ups = cells.filter((c) => c.dir === 'up').length;
+      const downs = cells.filter((c) => c.dir === 'down').length;
+      rows.push({ key: k, state: ups > downs ? 'subiu' : downs > ups ? 'caiu' : ups > 0 ? 'misto' : 'igual', cells });
+    }
+    rows.sort((a, b) => EX_STATE_ORDER.indexOf(a.state) - EX_STATE_ORDER.indexOf(b.state));
+    const setsOf = (list) => { const v = list.map((a) => a.sets).filter((x) => x > 0); return v.length ? mean(v) : null; };
+    const count = (s) => rows.filter((x) => x.state === s).length;
+    return { key, label, short: label.split(' — ')[0], nR: sr.length, nP: sp.length, rows, up: count('subiu'), down: count('caiu'), same: count('igual'), mixed: count('misto'), stopped: count('parou'), fresh: count('novo'), setsR: setsOf(sr), setsP: setsOf(sp) };
+  });
+}
+
+function perfType(type, windows) {
+  const { end, rStart, pStart, pEnd } = windows;
+  const all = DATA.activities.filter((a) => (type === 'geral' ? true : a.cat === type) && a.d <= end).sort((a, b) => `${a.d}${a.t}`.localeCompare(`${b.d}${b.t}`));
+  const recent = all.filter((a) => a.d >= addDays(end, -PERF_ACTIVE_DAYS));
+  if (recent.length < PERF_MIN) return null;
+  const R = all.filter((a) => a.d >= rStart);
+  const P = all.filter((a) => a.d >= pStart && a.d <= pEnd);
+  const nR = R.length;
+  const nP = P.length;
+  const last = all.at(-1);
+  const daysSince = daysBetween(last.d, end);
+  const dates = [...new Set(recent.map((a) => a.d))];
+  const gaps = dates.slice(1).map((d, i) => daysBetween(dates[i], d));
+  const usualGap = gaps.length >= 3 ? Math.round(Math.max(medianOf(gaps), mean(gaps))) : null;
+  const threshold = type === 'geral' ? 5 : Math.max(PERF_ABSENCE_DAYS, 2 * (usualGap ?? 0));
+  const absent = daysSince > threshold;
+
+  const evaluableVolume = Math.max(nR, nP) >= PERF_MIN;
+  const evaluableSession = Math.min(nR, nP) >= PERF_MIN;
+  const rows = [];
+  if (evaluableVolume) for (const row of volumeRows(type, R, P, nR, nP)) rows.push({ ...row, read: perfRead(row, row.r, row.p), kind: 'volume' });
+  if (evaluableSession) {
+    for (const metric of PERF_METRICS[type] ?? []) {
+      const values = (list) => list.map(metric.pick).filter((v) => v != null);
+      const r = values(R);
+      const p = values(P);
+      if (r.length < 2 || p.length < 2) continue;
+      rows.push({ ...metric, r: mean(r), p: mean(p), read: perfRead(metric, mean(r), mean(p)), kind: 'perf' });
+    }
+  }
+  const gains = rows.filter((row) => row.better !== 0 && row.read === 'melhor').length;
+  const losses = rows.filter((row) => row.better !== 0 && row.read === 'pior').length;
+  let state;
+  if (absent) state = 'ausência';
+  else if (!rows.length) state = 'poucos dados';
+  else if (gains > losses) state = 'ganho';
+  else if (losses > gains) state = 'queda';
+  else if (gains > 0) state = 'misto';
+  else state = 'estável';
+
+  const row = (id) => rows.find((x) => x.id === id);
+  const reads = [];
+  if (absent) reads.push(`Sem treino há ${plural(daysSince, 'dia', 'dias')}${usualGap != null ? ` (seu intervalo habitual é de ${usualGap} dias)` : ''}. Se não foi planejado, volte com uma sessão leve.`);
+  const freq = row('freq');
+  const time = row('time');
+  const perfRows = rows.filter((x) => x.kind === 'perf' && x.better !== 0);
+  if (freq && time && freq.read === 'pior' && time.read === 'pior') reads.push('Menos sessões e menos tempo: a constância caiu. Retome com sessões curtas antes de subir a intensidade.');
+  else if (freq && time && freq.read === 'melhor' && time.read === 'melhor') reads.push('Mais constância e mais tempo de treino: o melhor é manter por mais algumas semanas.');
+  if (freq && freq.read === 'igual' && perfRows.some((x) => x.read === 'melhor') && !perfRows.some((x) => x.read === 'pior')) reads.push('Mesma frequência e desempenho melhor: o treino está rendendo.');
+  if (freq && freq.read === 'igual' && perfRows.some((x) => x.read === 'pior') && !perfRows.some((x) => x.read === 'melhor')) reads.push('Mesma frequência e desempenho pior: pode ser cansaço ou sono; confira os sinais de descanso.');
+  const hr = row('hr');
+  if (type === 'corrida' && row('pace') && hr) {
+    if (row('pace').read === 'melhor' && hr.r - hr.p <= 2) reads.push('Ritmo melhor sem FC maior: ganho de eficiência.');
+    if (row('pace').read === 'pior' && hr.r - hr.p >= 4) reads.push('Ritmo pior com FC maior: possível fadiga.');
+  }
+  if ((type === 'futebol' || type === 'cardio' || type === 'ciclismo') && hr && hr.read === 'mais') reads.push('FC média mais alta: esforço maior nas sessões recentes.');
+  if ((type === 'futebol' || type === 'cardio' || type === 'ciclismo') && hr && hr.read === 'menos') reads.push('FC média mais baixa: esforço menor ou melhor condicionamento (os números não separam os dois).');
+
+  const routines = type === 'musculacao' ? routineChanges(R, P) : null;
+  return { type, name: type === 'geral' ? 'Todos os treinos' : catOf(type).name, state, rows, reads, nR, nP, daysSince, usualGap, threshold, absent, sessions180: recent.length, routines, last: last.d };
+}
+
+function perfFacts(fixedDays = null) {
+  // Tela Desempenho: a janela segue o filtro de periodo, o periodo escolhido (minimo 7 e maximo 365 dias) contra o periodo anterior do mesmo tamanho.
+  // Tela Hoje: janela fixa de 28 dias (fixedDays), porque ela responde "e agora?". Sem historico para um periodo anterior inteiro, a janela encurta
+  // (em "Tudo": a metade recente contra a anterior).
+  const end = state.to < today ? state.to : today;
+  const selected = fixedDays ?? daysBetween(state.from, end) + 1;
+  const room = Math.floor((daysBetween(firstDay, end) + 1) / 2);
+  PERF_DAYS = Math.min(Math.max(selected, PERF_MIN_DAYS), PERF_MAX_DAYS, room);
+  const rStart = addDays(end, -(PERF_DAYS - 1));
+  const pEnd = addDays(rStart, -1);
+  const pStart = addDays(pEnd, -(PERF_DAYS - 1));
+  const windows = { end, rStart, pStart, pEnd, days: PERF_DAYS };
+  if (PERF_DAYS < PERF_MIN_DAYS || pStart < firstDay) return { windows, noHistory: true, types: [], general: null, positives: [], negatives: [] };
+  const types = PERF_TYPES.map((t) => perfType(t, windows)).filter(Boolean).sort((a, b) => b.sessions180 - a.sessions180);
+  const general = perfType('geral', windows);
+
+  const positives = [];
+  const negatives = [];
+  const fmtRow = (t, row) => `${t.name}: ${row.name.toLowerCase()} ${row.fmt(row.p)} → ${row.fmt(row.r)} (${row.diff(row.r - row.p)}).`;
+  for (const t of types) {
+    if (t.absent) negatives.push({ kind: 'ausência', type: t.type, text: `${t.name}: sem treino há ${plural(t.daysSince, 'dia', 'dias')}${t.usualGap != null ? `, seu intervalo habitual é de ${t.usualGap}` : ''}.`, weight: 100 + t.sessions180 });
+    for (const row of t.rows) {
+      if (row.better === 0) continue;
+      if (row.read === 'melhor') positives.push({ type: t.type, text: fmtRow(t, row), weight: t.sessions180 });
+      if (row.read === 'pior') negatives.push({ kind: 'queda', type: t.type, text: fmtRow(t, row), weight: 10 + t.sessions180 });
+    }
+    for (const g of t.routines ?? []) {
+      for (const row of g.rows) {
+        const where = `${g.short} · ${exerciseName(row.key)}`;
+        if (row.state === 'parou') { negatives.push({ kind: 'ausência', scope: 'exercise', type: t.type, text: `${where}: parou (apareceu em ${row.before} treinos nos ${PERF_DAYS} dias anteriores, em nenhum agora).`, weight: 4 }); continue; }
+        if (row.state !== 'caiu' && row.state !== 'subiu') continue;
+        const changed = row.cells.filter((c) => c.dir && c.dir !== 'same').map((c) => `${c.m.name.toLowerCase()} ${c.m.fmt(c.pv)} → ${c.m.fmt(c.rv)} (${c.m.delta(c.rv, c.pv)})`).join('; ');
+        const kg = row.cells.find((c) => c.m.id === 'kg' && c.dir);
+        const weight = 5 + (kg ? Math.abs(relPct(kg.rv, kg.pv)) : 0);
+        if (row.state === 'caiu') negatives.push({ kind: 'queda', scope: 'exercise', type: t.type, text: `${where}: ${changed}.`, weight });
+        else positives.push({ scope: 'exercise', type: t.type, text: `${where}: ${changed}.`, weight });
+      }
+    }
+  }
+  if (general?.absent) negatives.push({ kind: 'ausência', type: 'geral', text: `Nenhum treino há ${plural(general.daysSince, 'dia', 'dias')}.`, weight: 200 });
+  positives.sort((a, b) => b.weight - a.weight);
+  negatives.sort((a, b) => b.weight - a.weight);
+  return { windows, noHistory: false, types, general, positives, negatives };
+}
+
+// Uma linha para o topo: ate 3 destaques (alertas primeiro, depois um ponto positivo).
+function perfHighlights(perf) {
+  if (perf.noHistory) return [];
+  const items = perf.negatives.filter((n) => n.kind === 'ausência' || n.kind === 'queda').filter((n) => !n.scope).slice(0, 2).map((n) => `${n.kind === 'ausência' ? '⚠' : '▼'} ${n.text}`);
+  if (perf.positives[0]) items.push(`▲ ${perf.positives[0].text}`);
+  return items;
+}
+
+const STATE_VIEW = {
+  ganho: { mark: '▲ ganho', cls: 'good' }, queda: { mark: '▼ queda', cls: 'bad' }, 'ausência': { mark: '⚠ ausência', cls: 'bad' },
+  estável: { mark: '= estável', cls: '' }, misto: { mark: '◆ misto', cls: '' }, 'poucos dados': { mark: 'poucos dados', cls: '' },
+};
+const stateChip = (s) => el('span', { class: `pill ${STATE_VIEW[s].cls === 'good' ? 'ok' : STATE_VIEW[s].cls === 'bad' ? 'bad' : 'neutral'}`, text: STATE_VIEW[s].mark });
+
+const EX_STATE_VIEW = {
+  subiu: { mark: '▲ subiu', cls: 'good' }, caiu: { mark: '▼ caiu', cls: 'bad' }, misto: { mark: '◆ misto', cls: '' },
+  igual: { mark: '= igual', cls: '' }, parou: { mark: '⚠ parou', cls: 'bad' }, novo: { mark: '+ novo', cls: 'good' },
+};
+const exCell = (cell) => {
+  if (!cell || cell.rv == null || cell.pv == null) return '–';
+  const cls = cell.dir === 'up' ? 'good' : cell.dir === 'down' ? 'bad' : '';
+  return el('span', { class: cls, text: `${cell.m.fmt(cell.pv)} → ${cell.m.fmt(cell.rv)} (${cell.m.delta(cell.rv, cell.pv)})` });
+};
+// Um bloco por treino: quais exercicios subiram ou cairam em carga, series, repeticoes e volume.
+function routineBlock(g) {
+  const view = g.down > g.up ? 'queda' : g.up > g.down ? 'ganho' : g.up + g.down > 0 ? 'misto' : 'estável';
+  const changed = g.rows.filter((r) => r.state !== 'igual');
+  const same = g.rows.filter((r) => r.state === 'igual');
+  const setsText = g.setsP != null && g.setsR != null ? ` · séries por treino ${num(g.setsP, 1)} → ${num(g.setsR, 1)}` : '';
+  const summary = `${plural(g.nR, 'treino', 'treinos')} nos últimos ${PERF_DAYS} dias contra ${g.nP}${setsText} · ${g.up} subiram, ${g.down} caíram${g.mixed ? `, ${g.mixed} mistos` : ''}, ${g.same} sem mudança${g.stopped ? `, ${g.stopped} pararam` : ''}${g.fresh ? `, ${g.fresh} novos` : ''}`;
+  const rows = changed.map((r) => {
+    const pick = (id) => (r.cells ? exCell(r.cells.find((c) => c.m.id === id)) : '–');
+    return { cells: [exerciseName(r.key), pick('kg'), pick('sets'), pick('reps'), pick('vol'), el('span', { class: EX_STATE_VIEW[r.state].cls, text: EX_STATE_VIEW[r.state].mark })] };
+  });
+  return el('div', { class: 'routine' },
+    el('h3', {}, `${g.label} `, stateChip(view)),
+    el('p', { class: 'note', text: summary }),
+    rows.length ? el('div', { class: 'wrap' }, table(['Exercício', 'Carga máx.', 'Séries por treino', 'Repetições por treino', 'Volume por treino', 'Leitura'], rows))
+      : el('p', { class: 'note', text: g.rows.length ? 'Nenhum exercício mudou nos critérios.' : `${NONE} suficientes: precisa de 2 treinos com o exercício em cada janela.` }),
+    same.length ? el('p', { class: 'note', text: `Sem mudança: ${same.map((r) => exerciseName(r.key)).join(', ')}.` }) : '');
+}
+
+function perfCard(t) {
+  const figures = t.rows.filter((r) => r.id === 'freq' || r.id === 'time').map((r) => `${r.name.toLowerCase()}: ${r.fmt(r.p)} → ${r.fmt(r.r)}`).join(' · ');
+  const tableRows = t.rows.map((r) => ({ cells: [r.name, r.fmt(r.p), r.fmt(r.r), r.diff(r.r - r.p), readCell(r)] }));
+  const parts = [el('h3', {}, `${t.name} `, stateChip(t.state)),
+    el('p', { class: 'note', text: `${plural(t.nR, 'sessão', 'sessões')} nos últimos ${PERF_DAYS} dias contra ${t.nP} nos ${PERF_DAYS} anteriores · última em ${full(t.last)}${figures ? ` · ${figures}` : ''}` })];
+  if (tableRows.length) parts.push(table(['Métrica', `${PERF_DAYS} dias antes`, `Últimos ${PERF_DAYS}`, 'Variação', 'Leitura'], tableRows, [1, 2, 3]));
+  else parts.push(el('p', { class: 'note', text: `${NONE} suficientes: precisa de pelo menos ${PERF_MIN} sessões em uma das janelas.${t.type === 'natacao' ? ' O treinador de natação, logo abaixo, compara por sessão (as últimas 4 contra as 4 anteriores) e funciona com poucas natações.' : ''}` }));
+  if (t.routines) parts.push(el('h3', { text: 'Por treino e por exercício' }), ...(t.routines.length ? t.routines.map(routineBlock) : [el('p', { class: 'note', text: `${NONE} de treinos de musculação nas janelas.` })]));
+  if (t.reads.length) parts.push(el('h3', { text: 'O que entender' }), bullets(t.reads));
+  return el('article', { class: `perf-card${t.routines ? ' wide' : ''}` }, ...parts);
+}
+
+function renderPerf() {
+  const perf = perfFacts();
+  const { rStart, pStart, pEnd, end } = perf.windows;
+  fill('perf-stat', `${short(rStart)} a ${short(end)} contra ${short(pStart)} a ${short(pEnd)}`);
+  if (perf.noHistory) {
+    fill('perf', el('p', { class: 'empty', text: `${NONE} anteriores: precisa de ${PERF_DAYS * 2} dias de histórico antes de ${full(end)}.` }));
+    return;
+  }
+  const list = (items, emptyText) => (items.length ? bullets(items.slice(0, 8).map((i) => i.text)) : el('p', { class: 'note', text: emptyText }));
+  const chips = el('div', { class: 'focus' }, ...[...(perf.general ? [perf.general] : []), ...perf.types].map((t) => el('span', { class: 'chip', style: 'padding:3px 10px;border:1px solid var(--grid);border-radius:6px' }, `${t.name}: `, stateChip(t.state))));
+  const general = perf.general ? perfCard(perf.general) : null;
+  fill('perf',
+    chips,
+    el('div', { class: 'week-grid', style: 'grid-template-columns:repeat(2,minmax(0,1fr))' },
+      el('div', {}, el('h3', { text: 'Alertas: quedas e ausências' }), list(perf.negatives, 'Nenhuma queda ou ausência nesta comparação.')),
+      el('div', {}, el('h3', { text: 'Pontos positivos' }), list(perf.positives, 'Nenhum ganho claro nesta comparação.'))),
+    el('div', { class: 'perf-grid' }, ...(general ? [general] : []), ...perf.types.map(perfCard)),
+    el('details', {}, el('summary', { text: 'Ver as regras do indicador' }), bullets([
+      `Janelas: o período do filtro (agora ${PERF_DAYS} dias, entre ${PERF_MIN_DAYS} e ${PERF_MAX_DAYS}) contra o período anterior do mesmo tamanho, terminando no fim do período selecionado (no máximo hoje). Em "Tudo", a metade recente do histórico contra a metade anterior; se faltar histórico, a janela encurta. Períodos curtos têm poucas sessões, então alguns tipos aparecem como "poucos dados". Só entra tipo com pelo menos ${PERF_MIN} sessões nos últimos ${PERF_ACTIVE_DAYS} dias.`,
+      `Sessões, tempo e volume por semana precisam de ${PERF_MIN} sessões em pelo menos uma das janelas; métricas por sessão (ritmo, SWOLF, séries, FC) precisam de ${PERF_MIN} em cada janela e de 2 sessões com o valor.`,
+      '"Igual" = dentro de 20% (ou 1 sessão) na frequência, 15% no tempo e no volume, 10% nas séries e repetições, 2 s/100 m no ritmo de natação, 5 s/km na corrida, 1 no SWOLF, 0,5 nas braçadas e 2 bpm na FC. FC e cadência só informam (mais/menos), não contam como ganho nem queda.',
+      'Estado do tipo: ganho (mais métricas melhores que piores), queda (o contrário), misto (igual número de melhores e piores), estável (nada mudou) ou ausência.',
+      `Ausência: dias sem treino do tipo maiores que o maior entre ${PERF_ABSENCE_DAYS} dias e 2 vezes o seu intervalo habitual (o maior entre a mediana e a média dos intervalos entre treinos nos últimos ${PERF_ACTIVE_DAYS} dias, para tipos que você faz em rajadas não gerarem alerta o tempo todo). Para todos os treinos juntos, 5 dias.`,
+      `Musculação por treino: cada sessão entra no Treino 1 (membros inferiores), 2 (costas e bíceps) ou 3 (peito, ombro e tríceps) pelo nome; os nomes antigos "Perna", "Dorsais bíceps" e "Peito Tríceps" contam como o mesmo treino. Para cada exercício compara a média por treino, em cada janela, de carga máxima (muda a partir de ${PERF_EXERCISE_PCT}%), séries (0,5), repetições (10%) e volume (10%), com pelo menos 2 treinos com o exercício em cada janela. Subiu = mais métricas subiram que caíram; caiu = o contrário; misto = igual número. Repetições e volume só contam em treinos em que o Garmin registrou repetições. Parou = apareceu em 2 treinos ou mais nos ${PERF_DAYS} anteriores e em nenhum agora; novo = o contrário.`,
+      'Mais sessões ou mais tempo contam como ganho de constância, mas uma semana mais leve pode ser proposital. São comparações com você mesmo, associações nos seus dados, não diagnóstico.',
+    ])));
+}
+
+// ----- treinador de natacao -----
+// Compara as ultimas natacoes com as anteriores (voce com voce mesmo). Cada achado diz de onde vem:
+// "seus dados" (comparacao calculada aqui) ou "regra geral" (convencao de treino, nao conclusao dos seus dados).
+const COACH_WINDOW = 4;
+const COACH_MIN = 3;
+const mmss = (s) => { const t = Math.round(s); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+const signedNum = (v, digits = 0) => `${v >= 0 ? '+' : '−'}${num(Math.abs(v), digits)}`;
+// better: -1 = menor e melhor; 0 = sem juizo (so mais/menos); tol = diferenca que ainda conta como "igual".
+const COACH_METRICS = [
+  { id: 'pace', name: 'Ritmo em movimento', pick: (a) => a.mv / (a.m / 100), fmt: (v) => `${mmss(v)} min/100 m`, diff: (d) => `${signedNum(d, 1)} s/100 m`, better: -1, tol: 2 },
+  { id: 'swolf', name: 'SWOLF', pick: (a) => a.sw, fmt: (v) => num(v, 1), diff: (d) => signedNum(d, 1), better: -1, tol: 1 },
+  { id: 'strokes', name: 'Braçadas por piscina', pick: (a) => a.st, fmt: (v) => num(v, 1), diff: (d) => signedNum(d, 1), better: -1, tol: 0.5 },
+  { id: 'cad', name: 'Cadência', pick: (a) => a.cad, fmt: (v) => `${num(v)} braç/min`, diff: (d) => signedNum(d), better: 0, tol: 1 },
+  { id: 'hr', name: 'FC média', pick: (a) => a.hr, fmt: (v) => `${num(v)} bpm`, diff: (d) => `${signedNum(d)} bpm`, better: 0, tol: 2 },
+  { id: 'meters', name: 'Distância por sessão', pick: (a) => a.m, fmt: (v) => `${num(v)} m`, diff: (d) => `${signedNum(d)} m`, better: 0, tol: 50 },
+];
+const avgOf = (list, metric) => {
+  const values = list.map(metric.pick).filter((v) => Number.isFinite(v));
+  return values.length ? mean(values) : null;
+};
+function readDiff(metric, diff) {
+  if (diff == null) return null;
+  if (Math.abs(diff) <= metric.tol) return 'igual';
+  if (metric.better === 0) return diff > 0 ? 'mais' : 'menos';
+  return diff * metric.better > 0 ? 'melhor' : 'pior';
+}
+const highZoneShare = (list) => {
+  const totals = [0, 0, 0, 0, 0];
+  for (const a of list) (a.z ?? []).forEach((s, i) => { totals[i] += s; });
+  const sum = totals.reduce((x, y) => x + y, 0);
+  return sum > 0 ? (totals[3] + totals[4]) / sum : null;
+};
+
+function coachFacts(ref) {
+  const all = DATA.activities.filter((a) => a.cat === 'natacao' && a.m > 0 && a.mv > 0 && a.d <= ref.last).sort((a, b) => `${a.d}${a.t}`.localeCompare(`${b.d}${b.t}`));
+  if (all.length < COACH_MIN) return { enough: false, count: all.length, focus: null, reason: null };
+  const recent = all.slice(-COACH_WINDOW);
+  const previous = all.slice(-2 * COACH_WINDOW, -COACH_WINDOW);
+  const hasPrev = previous.length >= COACH_MIN;
+  const rows = COACH_METRICS.map((metric) => {
+    const r = avgOf(recent, metric);
+    const p = hasPrev ? avgOf(previous, metric) : null;
+    const diff = r != null && p != null ? r - p : null;
+    return { metric, r, p, diff, read: readDiff(metric, diff) };
+  });
+  const by = Object.fromEntries(rows.map((row) => [row.metric.id, row]));
+
+  const findings = [];
+  if (hasPrev) {
+    const { strokes, pace, swolf, hr, meters } = by;
+    if (strokes.diff != null && strokes.diff >= 0.5 && pace.diff != null && pace.diff > -2) {
+      findings.push({ kind: 'atenção', focus: 'tecnica', source: 'seus dados', title: 'Eficiência de braçada caiu',
+        text: `Braçadas por piscina subiram de ${num(strokes.p, 1)} para ${num(strokes.r, 1)} sem ganho de ritmo (${pace.metric.diff(pace.diff)}).` });
+    } else if (swolf.diff != null && swolf.diff >= 2) {
+      findings.push({ kind: 'atenção', focus: 'tecnica', source: 'seus dados', title: 'SWOLF piorou',
+        text: `SWOLF subiu de ${num(swolf.p, 1)} para ${num(swolf.r, 1)} (menor é melhor).` });
+    }
+    if (hr.diff != null && hr.diff >= 4 && pace.diff != null && pace.diff > -2) {
+      findings.push({ kind: 'atenção', focus: 'recuperacao', source: 'seus dados', title: 'Mais esforço para o mesmo ritmo',
+        text: `FC média subiu ${num(hr.diff)} bpm (${num(hr.p)} para ${num(hr.r)}) sem ganho de ritmo. Pode ser cansaço: priorize nado leve.` });
+    }
+    if (pace.diff != null && pace.diff <= -2 && !(swolf.diff != null && swolf.diff >= 2)) {
+      findings.push({ kind: 'forte', focus: null, source: 'seus dados', title: 'Ritmo melhorou',
+        text: `Ritmo em movimento ${pace.metric.diff(pace.diff)} (${mmss(pace.p)} para ${mmss(pace.r)}) sem piora de SWOLF.` });
+    }
+    if (Math.abs(meters.diff) <= 0.05 * meters.p) {
+      findings.push({ kind: 'atenção', focus: 'resistencia', source: 'regra geral', title: 'Volume estável',
+        text: `Distância média por sessão praticamente igual (${num(meters.p)} m para ${num(meters.r)} m). Se estiver descansado, dá para progredir até 10%.` });
+    }
+  }
+  const high = highZoneShare(recent);
+  if (high != null && high >= 0.35) {
+    findings.push({ kind: 'atenção', focus: 'resistencia', source: 'regra geral', title: 'Muito tempo em zona alta',
+      text: `${pctText(high)} do tempo nas zonas 4 e 5 (últimas ${recent.length} natações). Mais nado contínuo e confortável ajuda a base.` });
+  } else if (high != null && high <= 0.1) {
+    findings.push({ kind: 'atenção', focus: 'velocidade', source: 'regra geral', title: 'Pouco estímulo de velocidade',
+      text: `Só ${pctText(high)} do tempo nas zonas 4 e 5 (últimas ${recent.length} natações). Séries curtas e rápidas podem entrar.` });
+  }
+  const weeks8 = all.filter((a) => a.d >= addDays(ref.last, -55));
+  if (weeks8.length / 8 < 1.5) {
+    findings.push({ kind: 'atenção', focus: null, source: 'regra geral', title: 'Frequência baixa',
+      text: `${num(weeks8.length / 8, 1)} natações por semana nas últimas 8 semanas (${weeks8.length} no total). Repetir toda semana tende a render mais do que apertar a intensidade.` });
+  }
+  const lead = findings.find((f) => f.kind === 'atenção' && f.focus);
+
+  // Ultima natacao contra as 4 anteriores a ela.
+  const last = all.at(-1);
+  const before = all.slice(-1 - COACH_WINDOW, -1);
+  const latest = before.length >= COACH_MIN ? COACH_METRICS.map((metric) => {
+    const v = metric.pick(last);
+    const base = avgOf(before, metric);
+    const diff = Number.isFinite(v) && base != null ? v - base : null;
+    return { metric, v, base, diff, read: readDiff(metric, diff) };
+  }) : null;
+
+  return { enough: true, count: all.length, recent, previous, hasPrev, rows, findings, latest, last, all, focus: lead?.focus ?? null, reason: lead ? `${lead.title.toLowerCase()}` : null };
+}
+
+const READ_CLASS = { melhor: 'good', pior: 'bad' };
+const readCell = (row) => (row.read ? el('span', { class: READ_CLASS[row.read] ?? '', text: `${row.read === 'melhor' ? '▲ ' : row.read === 'pior' ? '▼ ' : ''}${row.read}` }) : NONE);
+
+function renderCoach() {
+  const { ref } = weekCtx;
+  const coach = weekCtx.coach;
+  if (!coach.enough) {
+    fill('coach-stat', '');
+    fill('coach', el('p', { class: 'empty', text: `${NONE}: o treinador precisa de pelo menos ${COACH_MIN} natações até ${full(ref.last)} (há ${coach.count}).` }));
+    return;
+  }
+  fill('coach-stat', `${plural(coach.count, 'natação', 'natações')} até ${full(ref.last)} · últimas ${coach.recent.length} contra ${coach.previous.length} anteriores`);
+
+  const findingItems = coach.findings.length
+    ? coach.findings.map((f) => el('li', {}, el('strong', { text: `${f.kind === 'forte' ? '▲' : '●'} ${f.title}. ` }), f.text, el('span', { class: 'tag-src', text: f.source })))
+    : [el('li', { text: 'Nenhum achado nas últimas natações: números estáveis em relação às anteriores.' })];
+  const leadText = coach.focus
+    ? `Foco que o treinador aponta: ${FOCI.find((f) => f.id === coach.focus).label} (${coach.reason}). O plano abaixo usa isso quando não há sinais de descanso.`
+    : 'O treinador não aponta um foco específico agora.';
+
+  const trendRows = coach.hasPrev
+    ? coach.rows.map((row) => ({ cells: [row.metric.name, row.p == null ? NONE : row.metric.fmt(row.p), row.r == null ? NONE : row.metric.fmt(row.r),
+      row.diff == null ? NONE : row.metric.diff(row.diff), readCell(row)] }))
+    : null;
+  const trend = trendRows
+    ? table(['Métrica', `${coach.previous.length} anteriores`, `Últimas ${coach.recent.length}`, 'Variação', 'Leitura'], trendRows, [1, 2, 3])
+    : el('p', { class: 'note', text: `${NONE}: precisa de pelo menos ${COACH_MIN} natações antes das últimas ${COACH_WINDOW} para comparar.` });
+
+  const latestBlock = coach.latest
+    ? [el('h3', { text: `Última natação (${full(coach.last.d)}) contra as ${COACH_WINDOW} anteriores` }),
+      table(['Métrica', 'Nessa sessão', 'Média anteriores', 'Leitura'], coach.latest.map((row) => ({ cells: [row.metric.name,
+        Number.isFinite(row.v) ? row.metric.fmt(row.v) : NONE, row.base == null ? NONE : row.metric.fmt(row.base), readCell(row)] })), [1, 2])]
+    : [];
+
+  const targetIds = ['pace', 'swolf', 'strokes'];
+  const targets = coach.hasPrev ? coach.rows.filter((row) => targetIds.includes(row.metric.id) && row.r != null) : [];
+  const targetBlock = targets.length
+    ? [el('h3', { text: 'Metas para a próxima natação' }),
+      bullets(targets.map((row) => `${row.metric.name}: igualar ou melhorar a média das últimas ${coach.recent.length} (${row.metric.fmt(row.r)}).`)),
+      el('p', { class: 'note', text: 'Metas de comparação com você mesmo, não de desempenho absoluto. Menor é melhor nas três.' })]
+    : [];
+
+  const sessions = coach.all.slice(-8).reverse().map((a) => ({ cells: [full(a.d), `${num(a.m)} m`, `${mmss(a.mv / (a.m / 100))}`,
+    a.sw != null ? num(a.sw) : NONE, a.st != null ? num(a.st, 1) : NONE, a.cad != null ? num(a.cad) : NONE, a.hr != null ? num(a.hr) : NONE] }));
+  const details = el('details', {}, el('summary', { text: 'Ver as últimas 8 natações e as regras do treinador' }),
+    el('div', { class: 'wrap' }, table(['Data', 'Distância', 'Ritmo (min/100 m)', 'SWOLF', 'Braç./piscina', 'Cadência', 'FC média'], sessions, [1, 2, 3, 4, 5, 6])),
+    bullets([
+      `Janelas: as últimas ${COACH_WINDOW} natações contra as ${COACH_WINDOW} anteriores (pelo menos ${COACH_MIN} em cada). "Igual" = dentro de 2 s/100 m no ritmo, 1 no SWOLF, 0,5 nas braçadas, 1 na cadência, 2 bpm na FC e 50 m na distância.`,
+      'Eficiência de braçada caiu: braçadas por piscina subiram 0,5 ou mais e o ritmo não melhorou 2 s ou mais. SWOLF piorou: subiu 2 ou mais. Mais esforço: FC média subiu 4 bpm ou mais sem ganho de ritmo. Ritmo melhorou: caiu 2 s ou mais sem SWOLF 2 pontos pior.',
+      'Zonas: mais de 35% do tempo nas zonas 4 e 5 = muito intenso; 10% ou menos = pouco estímulo de velocidade (regra geral). Volume estável: distância média dentro de 5% (regra geral). Frequência baixa: menos de 1,5 natação por semana nas últimas 8 semanas (regra geral).',
+      '"Seus dados" é uma comparação calculada aqui; "regra geral" é convenção de treino, não conclusão tirada dos seus números. Nada disso mede técnica: só números do relógio.',
+    ]));
+
+  fill('coach',
+    el('p', { class: 'plan-line' }, leadText),
+    el('div', { class: 'coach-grid' },
+      el('div', {}, el('h3', { text: 'O que os números mostram' }), el('ul', {}, ...findingItems), ...targetBlock),
+      el('div', {}, el('h3', { text: `Tendência: últimas ${coach.recent.length} contra ${coach.previous.length} anteriores` }), trend, ...latestBlock)),
+    details);
+}
+
+// ----- treino de hoje (botao do treinador) -----
+// Gera UMA sessao de natacao para hoje, por regras: descanso (sono, HRV, Body Battery, carga, como voce se sente),
+// horario, tempo disponivel e treinos anteriores (ultima natacao, esforco dela, musculacao de pernas).
+const SLOTS = [{ id: 'manha', label: 'Manhã' }, { id: 'tarde', label: 'Tarde' }, { id: 'noite', label: 'Noite' }];
+const FEELS = [{ id: 'bem', label: 'Bem' }, { id: 'normal', label: 'Normal' }, { id: 'cansado', label: 'Cansado' }];
+const SESSION_MINUTES = [30, 45, 60].map((m) => ({ id: m, label: `${m} min` }));
+const LEVEL_NAMES = { bom: 'boa', moderado: 'moderada', leve: 'baixa', descanso: 'muito baixa' };
+const STRONG_TE = new Set(['TEMPO', 'LACTATE_THRESHOLD', 'VO2MAX', 'ANAEROBIC_CAPACITY', 'SPRINT']);
+const slotOf = (t) => (t < '12:00' ? 'manha' : t < '18:00' ? 'tarde' : 'noite');
+const daily = { slot: null, minutes: null, feel: 'normal', n: 0, shown: false };
+const allSwims = () => DATA.activities.filter((a) => a.cat === 'natacao' && a.m > 0).sort((a, b) => `${a.d}${a.t}`.localeCompare(`${b.d}${b.t}`));
+
+function initDaily(swims) {
+  if (daily.slot) return;
+  const counts = {};
+  for (const a of swims.slice(-20)) counts[slotOf(a.t)] = (counts[slotOf(a.t)] ?? 0) + 1;
+  daily.slot = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'manha';
+  const mins = swims.slice(-8).map((a) => a.sec / 60).sort((a, b) => a - b);
+  const median = mins.length ? mins[Math.floor(mins.length / 2)] : 45;
+  daily.minutes = SESSION_MINUTES.map((o) => o.id).reduce((best, m) => (Math.abs(m - median) < Math.abs(best - median) ? m : best), 45);
+}
+
+function dailyPlan(swims) {
+  const rec = (d) => dayIndex.get(d) ?? {};
+  const ref = referenceWeek(today);
+  const facts = ref ? weekFacts(ref) : null;
+  const coach = coachFacts({ last: today });
+  const reasons = [];
+  let points = 0;
+
+  const sleep = rec(today).sleep;
+  if (!sleep) reasons.push(`Sono da última noite: ${NONE}.`);
+  else if (sleep.sec < 21600) { points += 2; reasons.push(`Sono da última noite: ${hm(sleep.sec)}, menos de 6 h.`); }
+  else if (sleep.sec < SEVEN_HOURS) { points += 1; reasons.push(`Sono da última noite: ${hm(sleep.sec)}, menos de 7 h.`); }
+  else reasons.push(`Sono da última noite: ${hm(sleep.sec)}, sem alerta.`);
+
+  const hrvToday = rec(today).hrv;
+  const hrvBase = eachDay(addDays(today, -BASE_DAYS), addDays(today, -1)).map((d) => rec(d).hrv).filter((v) => v != null);
+  if (hrvToday != null && hrvBase.length >= MIN_BASE_VALUES) {
+    const limit = mean(hrvBase) - sd(hrvBase);
+    if (hrvToday < limit) { points += 1; reasons.push(`HRV de hoje: ${num(hrvToday)} ms, abaixo do seu normal (limite ${num(limit)} ms).`); }
+    else reasons.push(`HRV de hoje: ${num(hrvToday)} ms, dentro do seu normal (limite ${num(limit)} ms).`);
+  } else {
+    reasons.push(`HRV de hoje: ${NONE}.`);
+  }
+  for (const s of facts?.signals ?? []) {
+    if ((s.id === 'battery' || s.id === 'carga') && s.status === 'sinal') { points += 1; reasons.push(`${s.name} na semana: ${s.value} (${s.ref}).`); }
+  }
+  if (daily.feel === 'cansado') { points += 2; reasons.push('Você marcou que está cansado.'); }
+  else if (daily.feel === 'bem') { points -= 1; reasons.push('Você marcou que está bem.'); }
+
+  const last = swims.at(-1);
+  const daysSince = Math.round((ms(today) - ms(last.d)) / 86400000);
+  const lastStrong = STRONG_TE.has(last.te);
+  if (daysSince === 0) { points += 2; reasons.push('Você já nadou hoje.'); }
+  else reasons.push(`Última natação há ${plural(daysSince, 'dia', 'dias')} (${full(last.d)}), classificada pelo Garmin como ${lastStrong ? 'sessão forte' : 'sessão de base'}.`);
+
+  points = Math.max(0, points);
+  const level = points >= 5 ? 'descanso' : points >= 3 ? 'leve' : points >= 1 ? 'moderado' : 'bom';
+
+  let focus;
+  if (level === 'descanso' || level === 'leve') focus = 'recuperacao';
+  else if (level === 'moderado') focus = 'tecnica';
+  else focus = coach.focus && coach.focus !== 'recuperacao' ? coach.focus : (lastStrong ? 'tecnica' : 'resistencia');
+  if (level === 'bom') reasons.push(coach.focus && coach.focus !== 'recuperacao' ? `O treinador de natação aponta: ${coach.reason}.` : 'Sem alertas: foco em base ou técnica, alternando com o esforço da última natação.');
+  if (focus === 'velocidade') {
+    if (daysSince < 2) { focus = 'resistencia'; reasons.push('Sem séries rápidas: a última natação foi há menos de 2 dias.'); }
+    else if (lastStrong) { focus = 'resistencia'; reasons.push('Sem séries rápidas: a última natação já foi forte.'); }
+    else if (daily.slot === 'noite') { focus = 'tecnica'; reasons.push('Sem séries rápidas à noite, para não atrapalhar o sono (regra geral).'); }
+  }
+  if (daily.slot === 'noite') reasons.push('Treino à noite: intensidade limitada (regra geral).');
+  const lowerRecent = DATA.activities.some((a) => a.lw && (a.d === today || a.d === addDays(today, -1)));
+  if (lowerRecent) reasons.push('Musculação de pernas hoje ou ontem: sem bloco de pernada.');
+
+  const recent4 = swims.slice(-4);
+  const poolCounts = {};
+  for (const a of recent4) if (a.pl > 0) poolCounts[a.pl] = (poolCounts[a.pl] ?? 0) + 1;
+  const pool = Number(Object.entries(poolCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 25);
+  const u = pool * 2;
+  const pace100 = sumSec(recent4) / (sumM(recent4) / 100);
+  const dur = FOCI.find((f) => f.id === focus).dur;
+  const byTime = (daily.minutes * 60 * 100) / (pace100 * dur);
+  const longest = Math.max(...recent4.map((a) => a.m));
+  let target = byTime;
+  let limitedBy = 'tempo';
+  if (target > longest * MAX_PROGRESS) { target = longest * MAX_PROGRESS; limitedBy = 'progressão'; }
+  if (focus === 'recuperacao' && target > longest * 0.65) { target = longest * 0.65; limitedBy = 'recuperação'; }
+
+  const prevStart = addDays(monday(today), -7);
+  const basis = swimBasis({ start: prevStart, last: addDays(prevStart, 6) });
+  let budgetText = null;
+  if (basis) {
+    const budget = Math.floor(basis.meters * MAX_PROGRESS);
+    const done = sumM(swims.filter((a) => a.d >= monday(today) && a.d <= today));
+    budgetText = `Semana: ${num(done)} m já nadados de até ${num(budget)} m (base ${num(basis.meters)} m + 10%).`;
+    if (budget - done < MIN_SESSION_M) return { level, points, reasons, budgetText, noSession: `O volume de natação desta semana já está no limite do plano (${num(done)} de ${num(budget)} m). Hoje, descansar ou fazer outro treino.` };
+    if (target > budget - done) { target = budget - done; limitedBy = 'semana'; }
+  }
+  const total = Math.floor(target / u) * u;
+  if (total < MIN_SESSION_M) return { level, points, reasons, budgetText, noSession: 'Pelo tempo e pelos limites de hoje não sobra volume suficiente para uma sessão (mínimo 500 m).' };
+  const variant = (lowerRecent && focus === 'tecnica') || (daily.slot === 'noite' && focus === 'resistencia') ? 0 : daily.n;
+  const session = buildSession(total, focus, variant, u);
+  const minutes = Math.max(15, Math.round(((total / 100) * pace100 * dur) / 60 / 5) * 5);
+  const capText = {
+    tempo: `Distância pelo tempo escolhido: ${daily.minutes} min ao seu ritmo médio com pausas (${mmss(pace100)} min/100 m).`,
+    progressão: `Limitada a +10% sobre a sua maior natação recente (${num(longest)} m); o tempo escolhido comportaria mais.`,
+    recuperação: 'Volume de recuperação: até 65% da sua maior natação recente.',
+    semana: 'Limitada pelo que resta do volume semanal do plano.',
+  }[limitedBy];
+  return { level, points, focus, session, total, minutes, reasons, capText, budgetText };
+}
+
+function resultNode(plan) {
+  const focusLabel = (id) => FOCI.find((f) => f.id === id).label;
+  const why = el('div', {}, el('h3', { text: 'Por que este treino' }),
+    bullets([...plan.reasons, ...(plan.capText ? [plan.capText] : []), ...(plan.budgetText ? [plan.budgetText] : [])]));
+  if (plan.noSession) {
+    return el('div', { class: 'result' }, el('p', { class: 'headline', text: `Hoje: sem sessão de natação` }), el('p', { class: 'plan-line', text: plan.noSession }), why);
+  }
+  const s = plan.session;
+  const lines = el('div', { class: 'sess-lines' },
+    el('div', {}, el('b', { text: `Aquecimento: ${s.warm} m` }), ' · nado fácil, alternando estilos'),
+    ...s.blocks.map(blockLine),
+    el('div', {}, el('b', { text: `Soltura: ${s.cool} m` }), ' · muito leve'));
+  return el('div', { class: 'result' },
+    el('p', { class: 'headline' }, el('strong', { text: `${focusLabel(plan.focus)}: ~${plan.minutes} min · ${num(plan.total)} m` })),
+    el('p', { class: 'note', text: `Disposição estimada: ${LEVEL_NAMES[plan.level]} (${plan.points} ${plan.points === 1 ? 'ponto' : 'pontos'} de alerta).` }),
+    ...(plan.level === 'descanso' ? [el('p', { class: 'plan-line', text: '⚠ Os sinais pedem descanso hoje. Se mesmo assim quiser nadar, esta é uma alternativa leve.' })] : []),
+    lines, why,
+    el('p', { class: 'note', text: 'Sugestão automática por regras, não substitui treinador e não é enviada ao relógio. Ajuste se algo no corpo disser o contrário.' }));
+}
+
+function renderDaily() {
+  const box = document.getElementById('daily');
+  const swims = allSwims();
+  if (swims.length < COACH_MIN || !daily.shown) { box.className = ''; box.replaceChildren(); return; }
+  initDaily(swims);
+  const choice = (label, options, key) => el('div', { class: 'ctl' }, `${label}:`,
+    el('div', { class: 'focus', role: 'group', 'aria-label': label }, ...options.map((o) => {
+      const b = el('button', { type: 'button', text: o.label, 'aria-pressed': String(daily[key] === o.id) });
+      b.addEventListener('click', () => { daily[key] = o.id; daily.n = 0; renderDaily(); });
+      return b;
+    })));
+  const go = el('button', { type: 'button', class: 'go', text: daily.shown ? 'Gerar outro treino' : 'Gerar treino de hoje' });
+  go.addEventListener('click', () => { if (daily.shown) daily.n++; daily.shown = true; renderDaily(); });
+  box.className = 'daily';
+  box.replaceChildren(
+    el('h3', { text: 'Treino de hoje' }),
+    el('p', { class: 'note', text: `Monta uma sessão de natação para hoje (${dayName(today)} ${short(today)}) com os seus dados até agora, não com o período do seletor.` }),
+    choice('Horário', SLOTS, 'slot'), choice('Tempo disponível', SESSION_MINUTES, 'minutes'), choice('Como me sinto', FEELS, 'feel'),
+    go, ...(daily.shown ? [resultNode(dailyPlan(swims))] : []));
+}
+
+// ----- plano de natacao -----
+const FOCI = [
+  { id: 'tecnica', label: 'Técnica', dur: 1.1 },
+  { id: 'resistencia', label: 'Resistência', dur: 1.0 },
+  { id: 'velocidade', label: 'Velocidade', dur: 1.05 },
+  { id: 'recuperacao', label: 'Recuperação', dur: 1.1 },
+];
+// rep = repeticao em multiplos de u (u = 2 comprimentos de piscina); share = fatia do bloco principal.
+const TEMPLATES = {
+  tecnica: [
+    [{ name: 'Educativos', share: 0.25, rep: 1, effort: 'leve', rest: 20, text: 'educativos à escolha (um braço, pernada + braçadas, mãos em punho)' },
+      { name: 'Nado com foco técnico', core: true, rep: 2, effort: 'leve a moderado', rest: 20, text: 'contar braçadas por piscina e tentar reduzir sem perder ritmo' }],
+    [{ name: 'Pernada', share: 0.3, rep: 1, effort: 'moderado', rest: 20, text: 'pernada, com ou sem prancha' },
+      { name: 'Nado técnico', core: true, rep: 2, effort: 'leve a moderado', rest: 20, text: 'respiração bilateral e braçada longa' }],
+  ],
+  resistencia: [
+    [{ name: 'Série contínua', core: true, rep: 4, effort: 'moderado', rest: 20, text: 'ritmo constante e confortável, mesma pausa em todas as repetições' }],
+    [{ name: 'Série contínua', core: true, share: 0.7, rep: 4, effort: 'moderado', rest: 20, text: 'ritmo constante e confortável' },
+      { name: 'Série de ritmo', rep: 2, effort: 'moderado a forte', rest: 20, text: 'um pouco mais rápido que a série anterior' }],
+  ],
+  velocidade: [
+    [{ name: 'Tiros', core: true, share: 0.4, rep: 1, effort: 'forte', rest: 45, text: 'rápido com técnica; pausa longa para manter a qualidade' },
+      { name: 'Nado solto', rep: 2, effort: 'leve', rest: 15, text: 'recuperação ativa' }],
+    [{ name: 'Séries curtas', core: true, share: 0.5, rep: 2, effort: 'forte', rest: 30, text: 'rápido, mantendo o mesmo tempo em todas' },
+      { name: 'Nado solto', rep: 2, effort: 'leve', rest: 15, text: 'recuperação ativa' }],
+  ],
+  recuperacao: [
+    [{ name: 'Nado contínuo leve', core: true, rep: 4, effort: 'leve', rest: 15, text: 'esforço fácil, dá para conversar; foco em respirar e relaxar' }],
+  ],
+};
+const DAY_PATTERNS = { 1: [2], 2: [1, 4], 3: [0, 2, 4], 4: [0, 2, 4, 5] }; // indices de segunda (0) a domingo (6)
+
+function volumeFactor(focus, fired) {
+  if (focus === 'recuperacao') return 0.65;
+  if (focus === 'velocidade') return fired >= 1 ? 0.8 : 0.9;
+  if (focus === 'resistencia') return fired >= 1 ? 1.0 : 1.1;
+  return 1.0;
+}
+
+function swimBasis(ref) {
+  const swimsIn = (from, to) => actsBetween(from, to).filter((a) => a.cat === 'natacao' && a.m > 0);
+  const current = swimsIn(ref.start, ref.last);
+  if (current.length) return { kind: 'semana', list: current, meters: sumM(current), sessions: current.length, weeks: 1 };
+  const weeks = [];
+  for (let i = 1; i <= 8 && weeks.length < 4; i++) {
+    const start = addDays(ref.start, -7 * i);
+    if (start < monday(firstDay)) break;
+    const list = swimsIn(start, addDays(start, 6));
+    if (list.length) weeks.push(list);
+  }
+  if (!weeks.length) return null;
+  return { kind: 'media', list: weeks.flat(), meters: mean(weeks.map(sumM)), sessions: Math.round(mean(weeks.map((w) => w.length))), weeks: weeks.length };
+}
+
+const roundTo = (value, unit) => Math.round(value / unit) * unit;
+function mainBlocks(main, items, u) {
+  const use = main >= items.length * u * 2 ? items : [items.find((i) => i.core)];
+  let left = main;
+  return use.map((item, i) => {
+    const last = i === use.length - 1;
+    let target = last ? left : Math.min(left - u, Math.max(u, roundTo(main * item.share, u)));
+    if (!last) {
+      // Ajusta a fatia (em passos de u) para o bloco seguinte fechar em repeticoes redondas.
+      const nextRep = use[i + 1].rep;
+      for (const step of [0, 1, -1, 2, -2, 3, -3]) {
+        const t = target + step * u;
+        if (t >= u && left - t >= u && ((left - t) / u) % nextRep === 0) { target = t; break; }
+      }
+    }
+    let k = item.rep;
+    while (k > 1 && (target / u) % k !== 0) k--;
+    left -= target;
+    return { ...item, rep: k * u, reps: target / (k * u), meters: target };
+  });
+}
+function buildSession(total, focus, variant, u) {
+  const warm = Math.max(2 * u, roundTo(total * 0.15, u));
+  const cool = Math.max(u, roundTo(total * 0.1, u));
+  const variants = TEMPLATES[focus];
+  const blocks = mainBlocks(total - warm - cool, variants[variant % variants.length], u);
+  return { warm, cool, blocks, total: warm + cool + blocks.reduce((s, b) => s + b.meters, 0) };
+}
+function blockLine(b) {
+  const shape = b.reps > 1 ? `${b.reps}×${b.rep} m` : `${b.rep} m`;
+  const rest = b.reps > 1 ? ` · pausa ${b.rest} s` : '';
+  return el('div', {}, el('b', { text: `${b.name}: ${shape}` }), ` · ${b.effort}${rest} · ${b.text}`);
+}
+
+function renderPlan() {
+  if (!weekCtx) return;
+  const { ref, facts } = weekCtx;
+  const nextEnd = addDays(ref.next, 6);
+  fill('plan-stat', `${full(ref.next)} a ${full(nextEnd)}`);
+  const basis = swimBasis(ref);
+  const coach = weekCtx.coach;
+  const suggested = facts.fired >= 2 ? 'recuperacao' : facts.fired === 1 ? 'tecnica' : (coach.focus ?? 'resistencia');
+  const focus = state.focus ?? suggested;
+  const focusLabel = (id) => FOCI.find((f) => f.id === id).label;
+
+  const buttons = el('div', { class: 'focus', role: 'group', 'aria-label': 'Foco do plano' }, ...FOCI.map((f) => {
+    const b = el('button', { type: 'button', text: f.id === suggested ? `${f.label} (sugerido)` : f.label, 'aria-pressed': String(f.id === focus) });
+    b.addEventListener('click', () => { state.focus = f.id; renderPlan(); });
+    return b;
+  }));
+  const why = `Foco sugerido: ${focusLabel(suggested)}, porque ${facts.fired === 0 ? (coach.focus ? `nenhum sinal de descanso foi disparado e o treinador apontou: ${coach.reason}` : 'nenhum sinal de descanso foi disparado') : `${plural(facts.fired, 'sinal de descanso foi disparado', 'sinais de descanso foram disparados')}`}. Você pode trocar.`;
+  const head = [el('p', { class: 'note', text: why }), buttons];
+
+  if (!basis) {
+    fill('plan', ...head, el('p', { class: 'empty', text: `${NONE} de natação nas últimas semanas: sem base para calcular o plano.` }));
+    return;
+  }
+
+  const pool = (() => {
+    const counts = {};
+    for (const a of basis.list) if (a.pl > 0) counts[a.pl] = (counts[a.pl] ?? 0) + 1;
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    return top ? Number(top[0]) : 25;
+  })();
+  const u = pool * 2;
+  const recent = actsBetween(addDays(ref.last, -27), ref.last).filter((a) => a.cat === 'natacao' && a.m > 0);
+  const paceList = recent.length ? recent : basis.list;
+  const pace100 = sumSec(paceList) / (sumM(paceList) / 100);
+  const focusInfo = FOCI.find((f) => f.id === focus);
+
+  const factor = Math.min(MAX_PROGRESS, volumeFactor(focus, facts.fired));
+  const total = Math.floor((basis.meters * factor) / u) * u;
+  const baseText = basis.kind === 'semana'
+    ? `${num(basis.meters / 1000, 2)} km em ${plural(basis.sessions, 'sessão', 'sessões')} na semana de referência (${short(ref.start)} a ${short(ref.last)}${ref.partial ? `, ${ref.elapsed} de 7 dias` : ''})`
+    : `semana de referência sem natação; base = média das últimas ${plural(basis.weeks, 'semana completa', 'semanas completas')} com natação: ${num(basis.meters / 1000, 2)} km e ${plural(basis.sessions, 'sessão', 'sessões')} por semana`;
+  const caution = [];
+  if ((focus === 'resistencia' || focus === 'velocidade') && facts.fired >= 2) {
+    caution.push('Você escolheu um foco de esforço com 2 ou mais sinais de descanso: o volume foi limitado e o dia a dia pede cuidado. Considere "Recuperação".');
+  }
+  if (total < MIN_SESSION_M) {
+    fill('plan', ...head, el('p', { class: 'plan-line', text: `Base: ${baseText}.` }),
+      el('p', { class: 'empty', text: 'Volume da base pequeno demais para montar uma sessão com este foco (mínimo 500 m).' }));
+    return;
+  }
+
+  let n = Math.min(4, Math.max(1, basis.sessions));
+  while (n > 1 && total / n < MIN_SESSION_M) n--;
+  const per = Math.floor(total / n / u) * u;
+  const sizes = Array.from({ length: n }, (_, i) => (i === 0 ? total - per * (n - 1) : per));
+  const dates = DAY_PATTERNS[n].map((i) => addDays(ref.next, i));
+  const sessions = sizes.map((meters, i) => ({ date: dates[i], ...buildSession(meters, focus, i, u) }));
+  const planned = sessions.reduce((s, x) => s + x.total, 0);
+  const pct = Math.round((100 * (planned - basis.meters)) / basis.meters);
+  const minutes = (m) => Math.max(15, Math.round(((m / 100) * pace100 * focusInfo.dur) / 60 / 5) * 5);
+
+  const rows = sessions.map((s) => ({ cells: [
+    `${dayName(s.date)} ${short(s.date)}`,
+    `~${minutes(s.total)} min`,
+    `${num(s.total)} m`,
+    el('div', { class: 'sess-lines' },
+      el('div', {}, el('b', { text: `Aquecimento: ${s.warm} m` }), ' · nado fácil, alternando estilos'),
+      ...s.blocks.map(blockLine),
+      el('div', {}, el('b', { text: `Soltura: ${s.cool} m` }), ' · muito leve')),
+  ] }));
+  rows.push({ total: true, cells: ['Total', `~${minutes(planned)} min`, `${num(planned)} m`, `${pct >= 0 ? '+' : ''}${pct}% sobre a base (limite +10%) · ${plural(7 - n, 'dia', 'dias')} sem natação`] });
+
+  const line = el('p', { class: 'plan-line' }, el('strong', { text: `${focusLabel(focus)}: ${num(planned / 1000, 2)} km em ${plural(n, 'sessão', 'sessões')}. ` }),
+    `Base: ${baseText}. Ritmo médio de referência: ${pace(paceList.reduce((s, a) => s + paceSec(a), 0), sumM(paceList), 100)} min/100 m em movimento, como no Garmin (${pace(sumSec(paceList), sumM(paceList), 100)} com pausas, usado só para estimar a duração). Piscina de ${pool} m.`);
+  const tbl = table(['Dia', 'Duração', 'Distância', 'Estrutura'], rows, [1, 2]);
+  tbl.querySelectorAll('tbody td').forEach((td) => td.classList.add('top'));
+  const rules = el('details', {}, el('summary', { text: 'Ver as regras do plano' }), el('div', { class: 'plan-foot' }, bullets([
+    'Base: metros de natação da semana de referência; se ela não teve natação, média das últimas semanas completas com natação (até 4, olhando 8 semanas para trás).',
+    'Progressão: o total da semana seguinte nunca passa de +10% sobre a base, e é arredondado para baixo em múltiplos de 2 comprimentos de piscina.',
+    'Fator de volume por foco: técnica 1,00; resistência 1,10 sem sinais de descanso e 1,00 com 1 ou mais; velocidade 0,90 sem sinais e 0,80 com 1 ou mais; recuperação 0,65.',
+    'Sessões: mesmo número da base (no máximo 4), reduzido se cada sessão ficasse abaixo de 500 m; distribuídas na semana, sempre com dias sem natação.',
+    `Foco sugerido: recuperação com 2 ou mais sinais de descanso e técnica com 1; sem sinais, o foco que o treinador de natação aponta (resistência se ele não apontar nenhum).`,
+    `Duração: metros ÷ 100 × ritmo médio com pausas das natações dos últimos 28 dias (tempo total ÷ distância) × fator do foco (técnica 1,10; resistência 1,00; velocidade 1,05; recuperação 1,10), arredondada a 5 min.`,
+    'Esforço (leve, moderado, forte) é percepção, não zona de frequência cardíaca. O plano considera só a natação; outros treinos da semana não entram no cálculo.',
+  ])));
+  fill('plan', ...head, ...caution.map((t) => el('p', { class: 'plan-line', text: `⚠ ${t}` })), line, tbl, rules);
+}
+
+function render() {
+  try { if (state.preset !== 'free') localStorage.setItem('periodo', state.preset); } catch { /* arquivo local pode bloquear */ }
+  fromInput.value = state.from;
+  toInput.value = state.to;
+  fromInput.min = toInput.min = firstDay;
+  fromInput.max = toInput.max = today;
+  document.getElementById('range').textContent = `${full(state.from)} a ${full(state.to)} · ${TZ}`;
+  document.getElementById('period-sum').replaceChildren(el('span', { class: 'sum-l', text: 'Período' }),
+    el('span', { class: 'sum-v', text: `${PRESETS.find((p) => p.id === state.preset)?.label ?? 'datas livres'} · ${short(state.from)} a ${short(state.to)}` }));
+  renderPresets();
+  const data = selection();
+  renderHero(data);
+  renderCards(data);
+  renderCalendar(data);
+  renderHydration(data);
+  renderExercise(data);
+  renderPatterns();
+  renderRanks();
+  renderWeek();
+  renderPerf();
+  renderHomePerf();
+  renderGaps(data);
+  const withData = data.records.filter((r) => r.sleep).at(-1)?.date ?? data.records.at(-1)?.date ?? null;
+  selectDay(state.day && state.day >= state.from && state.day <= state.to ? state.day : withData, false);
+  applyPattern();
+  measureBar();
+}
+function measureBar() {
+  // No celular o menu fica fixo no topo; no computador a barra lateral nao ocupa a altura do conteudo.
+  const mobile = matchMedia('(max-width: 860px)').matches;
+  document.documentElement.style.setProperty('--bar-h', mobile ? `${document.getElementById('menu').offsetHeight}px` : '0px');
+}
+
+const themeButton = document.getElementById('theme');
+function setTheme(dark) {
+  if (dark) document.documentElement.dataset.theme = 'dark';
+  else delete document.documentElement.dataset.theme;
+  themeButton.textContent = dark ? 'Claro' : 'Escuro';
+  try { localStorage.setItem('tema', dark ? 'dark' : 'light'); } catch { /* arquivo local pode bloquear */ }
+}
+themeButton.addEventListener('click', () => setTheme(document.documentElement.dataset.theme !== 'dark'));
+try { if (localStorage.getItem('tema') === 'dark') setTheme(true); } catch { /* usa o tema claro */ }
+
+let resizeTimer;
+addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(render, 150);
+});
+document.getElementById('foot').textContent = `Dados locais, gerados em ${DATA.generatedAt}. Nada é enviado para fora deste computador.`;
+
+// Telas: Hoje, Desempenho, Natacao, Sono e descanso, Historico. A tela fica no endereco (#hoje...) e lembrada entre aberturas.
+// Ao trocar de tela, tudo e redesenhado: os graficos medem a largura do espaco onde estao.
+const VIEWS = ['hoje', 'desempenho', 'natacao', 'sono', 'historico'];
+function showView(id, scrollTo = null) {
+  const view = VIEWS.includes(id) ? id : 'hoje';
+  for (const v of VIEWS) document.getElementById(`view-${v}`).hidden = v !== view;
+  document.querySelectorAll('#menu a').forEach((a) => {
+    if (a.dataset.view === view) a.setAttribute('aria-current', 'page');
+    else a.removeAttribute('aria-current');
+  });
+  try { localStorage.setItem('tela', view); } catch { /* arquivo local pode bloquear */ }
+  render();
+  const target = scrollTo ? document.getElementById(scrollTo) : null;
+  if (target) target.scrollIntoView({ block: 'start' });
+  else window.scrollTo(0, 0);
+}
+function route() {
+  const hash = decodeURIComponent(location.hash.slice(1));
+  if (VIEWS.includes(hash)) { showView(hash); return; }
+  const target = hash ? document.getElementById(hash) : null;
+  const view = target?.closest('.view');
+  if (view) { showView(view.dataset.view, hash); return; }
+  let saved = null;
+  try { saved = localStorage.getItem('tela'); } catch { /* usa a tela Hoje */ }
+  showView(saved);
+}
+addEventListener('hashchange', route);
+
+// No celular o bloco de periodo comeca recolhido (so o resumo do periodo aparece), para nao empurrar o conteudo.
+if (matchMedia('(max-width: 860px)').matches) document.getElementById('period').open = false;
+
+// Lembra o periodo escolhido (exceto datas livres) entre aberturas e recargas.
+try {
+  const savedPreset = PRESETS.find((p) => p.id === localStorage.getItem('periodo'));
+  if (savedPreset) { [state.from, state.to] = savedPreset.range(); state.preset = savedPreset.id; }
+} catch { /* usa o padrao de 30 dias */ }
+route();
+
+// Aberto pela pagina de senha da nuvem: botao para sair e esquecer a senha neste aparelho.
+if (window.__criptografado) {
+  const sair = document.getElementById('sair');
+  sair.hidden = false;
+  sair.addEventListener('click', () => {
+    try { localStorage.removeItem('senha-painel'); } catch { /* sem armazenamento */ }
+    location.reload();
+  });
+}
+
+// Aberto por um servidor (celular): recarrega sozinho para pegar os dados atualizados. A tela e o periodo sao lembrados.
+// Na nuvem, so recarrega sozinho se a senha estiver lembrada neste aparelho (senao cairia na tela de senha).
+let reloadAllowed = true;
+try { reloadAllowed = !window.__criptografado || Boolean(localStorage.getItem('senha-painel')); } catch { reloadAllowed = !window.__criptografado; }
+if (location.protocol.startsWith('http') && reloadAllowed) {
+  const loadedAt = Date.now();
+  const RELOAD_MS = 15 * 60 * 1000;
+  setInterval(() => { if (document.visibilityState === 'visible') location.reload(); }, RELOAD_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && Date.now() - loadedAt > RELOAD_MS) location.reload();
+  });
+}
+</script>
+</body>
+</html>
