@@ -1,0 +1,76 @@
+# Atualiza o painel todo dia: baixa os dados do Garmin, gera o painel e publica so uma pagina CRIPTOGRAFADA.
+# Segredos necessarios (Settings > Secrets and variables > Actions): GARMIN_API_KEY e DASHBOARD_PASSWORD.
+# Os dados entre uma execucao e outra ficam num cache do GitHub, tambem criptografado com a mesma senha.
+name: Atualizar painel
+
+on:
+  schedule:
+    - cron: '0 10 * * *' # 07:00 em Sao Paulo (UTC-3)
+  workflow_dispatch: # botao "Run workflow" na aba Actions
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atualizar-painel
+  cancel-in-progress: false
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300 # o primeiro download traz o historico inteiro
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Restaurar os dados da ultima execucao (criptografados)
+        uses: actions/cache/restore@v4
+        with:
+          path: cache-dados.enc
+          key: dados-sem-correspondencia-exata
+          restore-keys: |
+            dados-
+
+      - name: Descriptografar os dados
+        env:
+          DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
+        run: node scripts/nuvem.mjs restaurar
+
+      - name: Baixar os dados do Garmin
+        env:
+          GARMIN_API_KEY: ${{ secrets.GARMIN_API_KEY }}
+        run: node scripts/baixar.mjs
+
+      - name: Gerar o painel
+        run: node scripts/gerar-painel.mjs
+
+      - name: Criptografar a pagina e os dados
+        env:
+          DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
+        run: node scripts/nuvem.mjs publicar
+
+      - name: Guardar os dados para a proxima execucao (criptografados)
+        uses: actions/cache/save@v4
+        with:
+          path: cache-dados.enc
+          key: dados-${{ github.run_id }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
